@@ -1,0 +1,55 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { api } from '@/services/api';
+import { useAuthStore } from '@/store/auth';
+import { roleAccessMap, type Role } from '@/types/roles';
+
+export function LoginPage() {
+  const navigate = useNavigate();
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const [email, setEmail] = useState('admin@rpx.com');
+  const [password, setPassword] = useState('Admin@123');
+  const [error, setError] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
+
+  async function handleLogin() {
+    try {
+      setLoggingIn(true);
+      setError('');
+      const { data } = await api.post('/auth/login', { email, password });
+      setAuth({ token: data.accessToken, refreshToken: data.refreshToken, user: data.user });
+      const firstAllowed = roleAccessMap[data.user.role as Role]?.[0] ?? 'dashboard';
+      navigate(`/${firstAllowed}`);
+    } catch {
+      setError('Nao foi possivel entrar. Verifique e-mail e senha.');
+    } finally {
+      setLoggingIn(false);
+    }
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 16 }}>
+      <Card style={{ maxWidth: 480, width: '100%' }}>
+        <h1>Entrar</h1>
+        <p>Use suas credenciais para acessar o painel administrativo.</p>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <label>
+            E-mail
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@rpx.com" />
+          </label>
+          <label>
+            Senha
+            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Digite sua senha" />
+          </label>
+          {error && <p style={{ color: 'var(--error)', margin: 0 }}>{error}</p>}
+          <Button onClick={handleLogin} loading={loggingIn} disabled={loggingIn}>
+            Entrar
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
