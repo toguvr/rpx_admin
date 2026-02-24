@@ -45,3 +45,4 @@ npm run dev
 - Login seed recomendado: `admin@rpx.com / Admin@123`
 - Login psicologo: `psicologo@rpx.com / Psico@123`
 - Perfil `PSICOLOGO` acessa a tela `Atendimentos` com chat em tempo real (Socket.IO)
+# rpx_admin
