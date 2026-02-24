@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import logo from '@/assets/rpx.svg';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { api } from '@/services/api';
@@ -32,24 +33,31 @@ export function LoginPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 16 }}>
-      <Card style={{ maxWidth: 480, width: '100%' }}>
-        <h1>Entrar</h1>
-        <p>Use suas credenciais para acessar o painel administrativo.</p>
-        <div style={{ display: 'grid', gap: 12 }}>
-          <label>
-            E-mail
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@rpx.com" />
-          </label>
-          <label>
-            Senha
-            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Digite sua senha" />
-          </label>
-          {error && <p style={{ color: 'var(--error)', margin: 0 }}>{error}</p>}
-          <Button onClick={handleLogin} loading={loggingIn} disabled={loggingIn}>
-            Entrar
-          </Button>
-        </div>
-      </Card>
+      <div style={{ maxWidth: 480, width: '100%' }}>
+        <img
+          src={logo}
+          alt="RPX"
+          style={{ width: '100%', maxWidth: 260, display: 'block', margin: '0 auto 12px' }}
+        />
+        <Card style={{ width: '100%' }}>
+          <h1>Entrar</h1>
+          <p>Use suas credenciais para acessar o painel administrativo.</p>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <label>
+              E-mail
+              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@rpx.com" />
+            </label>
+            <label>
+              Senha
+              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Digite sua senha" />
+            </label>
+            {error && <p style={{ color: 'var(--error)', margin: 0 }}>{error}</p>}
+            <Button onClick={handleLogin} loading={loggingIn} disabled={loggingIn}>
+              Entrar
+            </Button>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
