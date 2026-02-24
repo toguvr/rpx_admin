@@ -6,6 +6,7 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { ForumPage } from '@/pages/ForumPage';
 import { ImportsPage } from '@/pages/ImportsPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
 import { PsychologistChatPage } from '@/pages/PsychologistChatPage';
 import { PsychologistsPage } from '@/pages/PsychologistsPage';
 import { QuizzesPage } from '@/pages/QuizzesPage';
@@ -33,6 +34,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LoginPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
       <Route
         path="/*"
         element={

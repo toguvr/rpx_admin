@@ -42,6 +42,8 @@ npm run dev
 
 ## Integracao
 - API esperada em `VITE_API_URL` (padrao `http://localhost:3333/api`)
+- Pagina de politica local em `/privacy-policy`
+- Link da politica de privacidade em `VITE_PRIVACY_POLICY_URL` (opcional; se vazio, usa `/privacy-policy`)
 - Login seed recomendado: `admin@rpx.com / Admin@123`
 - Login psicologo: `psicologo@rpx.com / Psico@123`
 - Perfil `PSICOLOGO` acessa a tela `Atendimentos` com chat em tempo real (Socket.IO)
