@@ -4,7 +4,6 @@ export const roleAccessMap: Record<Role, string[]> = {
   ADMIN: [
     'dashboard',
     'courses',
-    'quizzes',
     'forum',
     'ranking',
     'imports',

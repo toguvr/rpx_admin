@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AppLayout } from '@/layouts/AppLayout';
+import { CourseDetailsPage } from '@/pages/CourseDetailsPage';
 import { CoursesPage } from '@/pages/CoursesPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ForumPage } from '@/pages/ForumPage';
@@ -9,7 +10,6 @@ import { LoginPage } from '@/pages/LoginPage';
 import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
 import { PsychologistChatPage } from '@/pages/PsychologistChatPage';
 import { PsychologistsPage } from '@/pages/PsychologistsPage';
-import { QuizzesPage } from '@/pages/QuizzesPage';
 import { RankingPage } from '@/pages/RankingPage';
 import { TeachersPage } from '@/pages/TeachersPage';
 import { useAuthStore } from '@/store/auth';
@@ -58,10 +58,10 @@ export function AppRoutes() {
                   }
                 />
                 <Route
-                  path="quizzes"
+                  path="courses/:courseId"
                   element={
-                    <RoleRoute routeKey="quizzes">
-                      <QuizzesPage />
+                    <RoleRoute routeKey="courses">
+                      <CourseDetailsPage />
                     </RoleRoute>
                   }
                 />

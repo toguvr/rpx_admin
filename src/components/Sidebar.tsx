@@ -6,7 +6,6 @@ import { hasAccess } from '@/types/roles';
 const items = [
   { to: '/dashboard', label: 'Dashboard', key: 'dashboard' },
   { to: '/courses', label: 'Cursos', key: 'courses' },
-  { to: '/quizzes', label: 'Quizzes', key: 'quizzes' },
   { to: '/forum', label: 'Forum', key: 'forum' },
   { to: '/ranking', label: 'Ranking', key: 'ranking' },
   { to: '/imports', label: 'Alunos', key: 'imports' },

@@ -32,12 +32,14 @@ export function Modal({ title, open, onClose, width = 560, children }: Props) {
         style={{
           width: '100%',
           maxWidth: width,
+          maxHeight: 'calc(100vh - 32px)',
           background: '#fff',
           borderRadius: 16,
           border: '1px solid var(--primary-soft)',
           padding: 16,
           display: 'grid',
           gap: 12,
+          overflowY: 'auto',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
