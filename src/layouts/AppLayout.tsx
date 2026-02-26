@@ -2,6 +2,7 @@ import { useEffect, useState, type PropsWithChildren } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
 import { Sidebar } from '@/components/Sidebar';
 import { useAuthStore } from '@/store/auth';
 
@@ -34,15 +35,17 @@ export function AppLayout({ children }: PropsWithChildren) {
         <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <strong>{user?.name}</strong>
-            <p style={{ margin: 0, color: 'var(--gray-1)' }}>{user?.role}</p>
+            <p style={{ margin: 0, color: 'var(--muted-foreground)' }}>{user?.role}</p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {isMobile && (
               <Button
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
-                style={{ background: 'var(--gray-1)' }}
+                variant="secondary"
+                aria-label="Abrir menu"
+                title="Abrir menu"
               >
-                Menu
+                <Icon name="menu" />
               </Button>
             )}
             <Button

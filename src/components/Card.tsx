@@ -4,10 +4,11 @@ export function Card({ children, style }: PropsWithChildren<{ style?: CSSPropert
   return (
     <div
       style={{
-        background: '#fff',
-        borderRadius: 16,
+        background: 'var(--card)',
+        borderRadius: 10,
         padding: 16,
-        border: '1px solid var(--primary-soft)',
+        border: '1px solid var(--border)',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
         ...style,
       }}
     >

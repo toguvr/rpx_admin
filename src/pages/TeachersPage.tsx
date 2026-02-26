@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 import { api } from '@/services/api';
 
@@ -57,7 +58,9 @@ export function TeachersPage() {
             <strong>{teacher.name}</strong>
             <p>{teacher.email}</p>
             <Button
-              style={{ background: 'var(--error)' }}
+              variant="destructive"
+              aria-label="Excluir professor"
+              title="Excluir professor"
               onClick={() => {
                 if (!window.confirm('Deseja excluir este professor?')) return;
                 setRemovingId(teacher.id);
@@ -68,7 +71,7 @@ export function TeachersPage() {
               loading={remove.isPending && removingId === teacher.id}
               disabled={remove.isPending}
             >
-              Excluir
+              <Icon name="trash" />
             </Button>
           </div>
         ))}

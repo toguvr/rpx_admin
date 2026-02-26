@@ -27,7 +27,7 @@ export function Sidebar({ isMobile = false, mobileOpen = false, onClose }: Sideb
   return (
     <aside
       className={`app-sidebar ${isMobile ? 'is-mobile' : ''} ${mobileOpen ? 'is-open' : ''}`}
-      style={{ width: 280, background: '#fff', borderRight: '1px solid #d9e5e8', padding: 18 }}
+      style={{ width: 280, background: 'var(--card)', borderRight: '1px solid var(--border)', padding: 18 }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <h1 style={{ marginTop: 0, marginBottom: 0 }}>RPX Cursos</h1>
@@ -37,7 +37,7 @@ export function Sidebar({ isMobile = false, mobileOpen = false, onClose }: Sideb
           </button>
         )}
       </div>
-      <p style={{ color: 'var(--gray-1)' }}>Painel Admin</p>
+      <p style={{ color: 'var(--muted-foreground)' }}>Painel Admin</p>
 
       <nav style={{ display: 'grid', gap: 8, marginTop: 20 }}>
         {visibleItems.map((item) => (
@@ -49,12 +49,12 @@ export function Sidebar({ isMobile = false, mobileOpen = false, onClose }: Sideb
             }}
             style={({ isActive }) => ({
               textDecoration: 'none',
-              color: 'var(--text)',
+              color: 'var(--foreground)',
               padding: '12px',
-              borderRadius: 10,
-              border: '1px solid var(--primary-soft)',
-              background: isActive ? 'var(--primary-soft)' : '#fff',
-              fontWeight: 700,
+              borderRadius: 8,
+              border: '1px solid var(--border)',
+              background: isActive ? 'var(--accent)' : 'transparent',
+              fontWeight: 600,
             })}
           >
             {item.label}

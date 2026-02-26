@@ -1,15 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 import { api } from '@/services/api';
 
 type EditModalType = 'none' | 'quiz' | 'lesson';
-type OptionKey = 'A' | 'B' | 'C' | 'D';
-
 export function CourseDetailsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -27,8 +26,9 @@ export function CourseDetailsPage() {
   const [lessonTitle, setLessonTitle] = useState('');
   const [lessonDescription, setLessonDescription] = useState('');
   const [lessonVideoFile, setLessonVideoFile] = useState<File | null>(null);
-  const [lessonOrder, setLessonOrder] = useState(1);
   const [lessonDurationSeconds, setLessonDurationSeconds] = useState<number | ''>('');
+  const [draggingQuizId, setDraggingQuizId] = useState('');
+  const [draggingLessonId, setDraggingLessonId] = useState('');
 
   const [editModalType, setEditModalType] = useState<EditModalType>('none');
   const [editingQuizId, setEditingQuizId] = useState('');
@@ -37,34 +37,10 @@ export function CourseDetailsPage() {
   const [editingLessonTitle, setEditingLessonTitle] = useState('');
   const [editingLessonDescription, setEditingLessonDescription] = useState('');
   const [editingLessonVideoFile, setEditingLessonVideoFile] = useState<File | null>(null);
-  const [editingLessonOrder, setEditingLessonOrder] = useState(1);
   const [editingLessonDurationSeconds, setEditingLessonDurationSeconds] = useState<number | ''>('');
 
-  const [questionModalOpen, setQuestionModalOpen] = useState(false);
-  const [selectedQuizForQuestionsId, setSelectedQuizForQuestionsId] = useState('');
-  const [editingQuestionId, setEditingQuestionId] = useState('');
-  const [questionStatement, setQuestionStatement] = useState('');
-  const [questionOrder, setQuestionOrder] = useState(1);
-  const [optionA, setOptionA] = useState('');
-  const [optionB, setOptionB] = useState('');
-  const [optionC, setOptionC] = useState('');
-  const [optionD, setOptionD] = useState('');
-  const [correctOption, setCorrectOption] = useState<OptionKey>('A');
   const [createQuizModalOpen, setCreateQuizModalOpen] = useState(false);
   const [createLessonModalOpen, setCreateLessonModalOpen] = useState(false);
-
-  const { data: quizQuestions, isLoading: loadingQuestions } = useQuery({
-    queryKey: ['quiz-questions', selectedQuizForQuestionsId],
-    queryFn: async () => (await api.get(`/quizzes/${selectedQuizForQuestionsId}/questions`)).data,
-    enabled: questionModalOpen && Boolean(selectedQuizForQuestionsId),
-  });
-
-  useEffect(() => {
-    if (course && !lessonTitle && !lessonDescription && !lessonVideoFile) {
-      const nextOrder = (course.lessons?.length ?? 0) + 1;
-      setLessonOrder(nextOrder);
-    }
-  }, [course, lessonDescription, lessonTitle, lessonVideoFile]);
 
   function closeEditModal() {
     setEditModalType('none');
@@ -73,43 +49,8 @@ export function CourseDetailsPage() {
     setEditingLessonVideoFile(null);
   }
 
-  function resetQuestionForm() {
-    setEditingQuestionId('');
-    setQuestionStatement('');
-    setQuestionOrder((quizQuestions?.length ?? 0) + 1);
-    setOptionA('');
-    setOptionB('');
-    setOptionC('');
-    setOptionD('');
-    setCorrectOption('A');
-  }
-
   function openQuestionManager(quiz: any) {
-    setSelectedQuizForQuestionsId(quiz.id);
-    setQuestionModalOpen(true);
-    setEditingQuestionId('');
-    setQuestionStatement('');
-    setQuestionOrder(1);
-    setOptionA('');
-    setOptionB('');
-    setOptionC('');
-    setOptionD('');
-    setCorrectOption('A');
-  }
-
-  function fillQuestionForm(question: any) {
-    const options = question.options ?? [];
-    setEditingQuestionId(question.id);
-    setQuestionStatement(question.statement ?? '');
-    setQuestionOrder(question.order ?? 1);
-    setOptionA(options[0]?.text ?? '');
-    setOptionB(options[1]?.text ?? '');
-    setOptionC(options[2]?.text ?? '');
-    setOptionD(options[3]?.text ?? '');
-
-    const correctIndex = options.findIndex((item: any) => item.isCorrect);
-    const map: OptionKey[] = ['A', 'B', 'C', 'D'];
-    setCorrectOption(map[correctIndex] ?? 'A');
+    navigate(`/courses/${courseId}/quizzes/${quiz.id}`);
   }
 
   async function uploadVideoToS3(file: File) {
@@ -169,60 +110,6 @@ export function CourseDetailsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['courses'] });
       window.alert('Quiz excluido com sucesso.');
-      if (selectedQuizForQuestionsId) {
-        setQuestionModalOpen(false);
-        setSelectedQuizForQuestionsId('');
-      }
-    },
-  });
-
-  const createQuestion = useMutation({
-    mutationFn: async () =>
-      api.post('/quizzes/questions', {
-        quizId: selectedQuizForQuestionsId,
-        statement: questionStatement,
-        order: questionOrder,
-        options: [
-          { text: optionA, isCorrect: correctOption === 'A' },
-          { text: optionB, isCorrect: correctOption === 'B' },
-          { text: optionC, isCorrect: correctOption === 'C' },
-          { text: optionD, isCorrect: correctOption === 'D' },
-        ],
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['quiz-questions', selectedQuizForQuestionsId] });
-      window.alert('Pergunta cadastrada com sucesso.');
-      resetQuestionForm();
-    },
-  });
-
-  const updateQuestion = useMutation({
-    mutationFn: async () =>
-      api.put(`/quizzes/questions/${editingQuestionId}`, {
-        statement: questionStatement,
-        order: questionOrder,
-        options: [
-          { text: optionA, isCorrect: correctOption === 'A' },
-          { text: optionB, isCorrect: correctOption === 'B' },
-          { text: optionC, isCorrect: correctOption === 'C' },
-          { text: optionD, isCorrect: correctOption === 'D' },
-        ],
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['quiz-questions', selectedQuizForQuestionsId] });
-      window.alert('Pergunta atualizada com sucesso.');
-      resetQuestionForm();
-    },
-  });
-
-  const deleteQuestion = useMutation({
-    mutationFn: async (questionId: string) => api.delete(`/quizzes/questions/${questionId}`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['quiz-questions', selectedQuizForQuestionsId] });
-      window.alert('Pergunta excluida com sucesso.');
-      if (editingQuestionId) {
-        resetQuestionForm();
-      }
     },
   });
 
@@ -240,7 +127,6 @@ export function CourseDetailsPage() {
         videoKey: uploaded.videoKey,
         videoOriginalName: uploaded.videoOriginalName,
         videoMimeType: uploaded.videoMimeType,
-        order: lessonOrder,
         durationSeconds: lessonDurationSeconds === '' ? undefined : Number(lessonDurationSeconds),
       });
     },
@@ -259,7 +145,6 @@ export function CourseDetailsPage() {
       const payload: Record<string, unknown> = {
         title: editingLessonTitle,
         description: editingLessonDescription,
-        order: editingLessonOrder,
         durationSeconds:
           editingLessonDurationSeconds === '' ? undefined : Number(editingLessonDurationSeconds),
       };
@@ -288,6 +173,22 @@ export function CourseDetailsPage() {
     },
   });
 
+  const reorderLessons = useMutation({
+    mutationFn: async (lessonIds: string[]) =>
+      api.patch(`/courses/${courseId}/lessons/reorder`, { lessonIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['courses'] });
+    },
+  });
+
+  const reorderQuizzes = useMutation({
+    mutationFn: async (quizIds: string[]) =>
+      api.patch('/quizzes/reorder', { courseId, quizIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['courses'] });
+    },
+  });
+
   if (isLoading) {
     return <p>Carregando curso...</p>;
   }
@@ -306,8 +207,18 @@ export function CourseDetailsPage() {
     );
   }
 
-  const lessons = course.lessons ?? [];
-  const quizzes = course.quizzes ?? [];
+  const lessons = [...(course.lessons ?? [])].sort((a: any, b: any) => a.order - b.order);
+  const quizzes = [...(course.quizzes ?? [])].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+
+  function reorderList<T extends { id: string }>(items: T[], fromId: string, toId: string) {
+    const from = items.findIndex((item) => item.id === fromId);
+    const to = items.findIndex((item) => item.id === toId);
+    if (from < 0 || to < 0 || from === to) return items;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    return next;
+  }
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -333,6 +244,7 @@ export function CourseDetailsPage() {
           <button
             type="button"
             aria-label="Adicionar quiz"
+            title="Adicionar quiz"
             onClick={() => setCreateQuizModalOpen(true)}
             style={{
               width: 36,
@@ -347,7 +259,7 @@ export function CourseDetailsPage() {
               lineHeight: 1,
             }}
           >
-            +
+            <Icon name="plus" size={18} />
           </button>
         </div>
         {!quizzes.length && <p>Nenhum quiz cadastrado para este curso.</p>}
@@ -363,26 +275,63 @@ export function CourseDetailsPage() {
               </thead>
               <tbody>
                 {quizzes.map((quiz: any) => (
-                  <tr key={quiz.id} style={{ borderTop: '1px solid var(--primary-soft)' }}>
-                    <td style={{ padding: '8px 0' }}>Quiz do curso</td>
+                  <tr
+                    key={quiz.id}
+                    draggable
+                    onDragStart={() => setDraggingQuizId(quiz.id)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => {
+                      if (!draggingQuizId || draggingQuizId === quiz.id) return;
+                      const next = reorderList(quizzes, draggingQuizId, quiz.id);
+                      reorderQuizzes.mutate(next.map((item: any) => item.id), {
+                        onError: (error: any) => {
+                          window.alert(error?.response?.data?.message ?? 'Erro ao reordenar quizzes.');
+                        },
+                      });
+                      setDraggingQuizId('');
+                    }}
+                    style={{ borderTop: '1px solid var(--primary-soft)', cursor: 'grab' }}
+                  >
+                    <td style={{ padding: '8px 0' }}>
+                      <button
+                        type="button"
+                        onClick={() => openQuestionManager(quiz)}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'var(--primary)',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
+                        Quiz do curso
+                      </button>
+                    </td>
                     <td>{quiz.maxAttempts}</td>
                     <td style={{ padding: '8px 0' }}>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <Button onClick={() => openQuestionManager(quiz)}>Perguntas e respostas</Button>
+                        <Button aria-label="Abrir quiz" title="Abrir quiz" onClick={() => openQuestionManager(quiz)}>
+                          <Icon name="open" />
+                        </Button>
                         <Button
-                          style={{ background: 'var(--gray-1)' }}
+                          variant="secondary"
+                          aria-label="Editar quiz"
+                          title="Editar quiz"
                           onClick={() => {
                             setEditingQuizId(quiz.id);
                             setEditingQuizMaxAttempts(quiz.maxAttempts ?? 1);
                             setEditModalType('quiz');
                           }}
                         >
-                          Editar
+                          <Icon name="edit" />
                         </Button>
                         <Button
-                          style={{ background: 'var(--error)' }}
+                          variant="destructive"
                           loading={deleteQuiz.isPending}
                           disabled={deleteQuiz.isPending}
+                          aria-label="Excluir quiz"
+                          title="Excluir quiz"
                           onClick={() => {
                             if (!window.confirm('Deseja excluir este quiz?')) {
                               return;
@@ -394,7 +343,7 @@ export function CourseDetailsPage() {
                             });
                           }}
                         >
-                          Excluir
+                          <Icon name="trash" />
                         </Button>
                       </div>
                     </td>
@@ -412,6 +361,7 @@ export function CourseDetailsPage() {
           <button
             type="button"
             aria-label="Adicionar aula"
+            title="Adicionar aula"
             onClick={() => setCreateLessonModalOpen(true)}
             style={{
               width: 36,
@@ -426,7 +376,7 @@ export function CourseDetailsPage() {
               lineHeight: 1,
             }}
           >
-            +
+            <Icon name="plus" size={18} />
           </button>
         </div>
         {!lessons.length && <p>Nenhuma aula cadastrada para este curso.</p>}
@@ -444,7 +394,23 @@ export function CourseDetailsPage() {
               </thead>
               <tbody>
                 {lessons.map((lesson: any) => (
-                  <tr key={lesson.id} style={{ borderTop: '1px solid var(--primary-soft)' }}>
+                  <tr
+                    key={lesson.id}
+                    draggable
+                    onDragStart={() => setDraggingLessonId(lesson.id)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => {
+                      if (!draggingLessonId || draggingLessonId === lesson.id) return;
+                      const next = reorderList(lessons, draggingLessonId, lesson.id);
+                      reorderLessons.mutate(next.map((item: any) => item.id), {
+                        onError: (error: any) => {
+                          window.alert(error?.response?.data?.message ?? 'Erro ao reordenar aulas.');
+                        },
+                      });
+                      setDraggingLessonId('');
+                    }}
+                    style={{ borderTop: '1px solid var(--primary-soft)', cursor: 'grab' }}
+                  >
                     <td style={{ padding: '8px 0' }}>{lesson.title}</td>
                     <td>{lesson.order}</td>
                     <td>{lesson.durationSeconds ? `${lesson.durationSeconds}s` : '-'}</td>
@@ -452,23 +418,26 @@ export function CourseDetailsPage() {
                     <td style={{ padding: '8px 0' }}>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <Button
-                          style={{ background: 'var(--gray-1)' }}
+                          variant="secondary"
+                          aria-label="Editar aula"
+                          title="Editar aula"
                           onClick={() => {
                             setEditingLessonId(lesson.id);
                             setEditingLessonTitle(lesson.title ?? '');
                             setEditingLessonDescription(lesson.description ?? '');
-                            setEditingLessonOrder(lesson.order ?? 1);
                             setEditingLessonDurationSeconds(lesson.durationSeconds ?? '');
                             setEditingLessonVideoFile(null);
                             setEditModalType('lesson');
                           }}
                         >
-                          Editar
+                          <Icon name="edit" />
                         </Button>
                         <Button
-                          style={{ background: 'var(--error)' }}
+                          variant="destructive"
                           loading={deleteLesson.isPending}
                           disabled={deleteLesson.isPending}
+                          aria-label="Excluir aula"
+                          title="Excluir aula"
                           onClick={() => {
                             if (!window.confirm(`Deseja excluir a aula "${lesson.title}"?`)) {
                               return;
@@ -480,7 +449,7 @@ export function CourseDetailsPage() {
                             });
                           }}
                         >
-                          Excluir
+                          <Icon name="trash" />
                         </Button>
                       </div>
                     </td>
@@ -555,16 +524,6 @@ export function CourseDetailsPage() {
             />
           </label>
           <label>
-            Ordem da aula
-            <input
-              type="number"
-              min={1}
-              placeholder="Ex: 1"
-              value={lessonOrder}
-              onChange={(e) => setLessonOrder(Number(e.target.value) || 1)}
-            />
-          </label>
-          <label>
             Duracao em segundos (opcional)
             <input
               type="number"
@@ -592,141 +551,6 @@ export function CourseDetailsPage() {
           >
             Cadastrar aula
           </Button>
-        </div>
-      </Modal>
-
-      <Modal title="Perguntas e respostas do quiz" open={questionModalOpen} onClose={() => setQuestionModalOpen(false)}>
-        <div style={{ display: 'grid', gap: 12 }}>
-          {loadingQuestions && <p>Carregando perguntas...</p>}
-          {!loadingQuestions && (
-            <div style={{ display: 'grid', gap: 8 }}>
-              <strong>Perguntas cadastradas</strong>
-              {!quizQuestions?.length && <p>Nenhuma pergunta cadastrada.</p>}
-              {quizQuestions?.map((question: any) => (
-                <div key={question.id} style={{ border: '1px solid var(--primary-soft)', borderRadius: 10, padding: 8 }}>
-                  <strong>
-                    {question.order}. {question.statement}
-                  </strong>
-                  <ul style={{ margin: '6px 0' }}>
-                    {(question.options ?? []).map((option: any, index: number) => (
-                      <li key={option.id}>
-                        {['A', 'B', 'C', 'D'][index]}. {option.text} {option.isCorrect ? '(Correta)' : ''}
-                      </li>
-                    ))}
-                  </ul>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button style={{ background: 'var(--gray-1)' }} onClick={() => fillQuestionForm(question)}>
-                      Editar
-                    </Button>
-                    <Button
-                      style={{ background: 'var(--error)' }}
-                      loading={deleteQuestion.isPending}
-                      disabled={deleteQuestion.isPending}
-                      onClick={() => {
-                        if (!window.confirm('Deseja excluir esta pergunta?')) return;
-                        deleteQuestion.mutate(question.id, {
-                          onError: (error: any) => {
-                            window.alert(error?.response?.data?.message ?? 'Erro ao excluir pergunta.');
-                          },
-                        });
-                      }}
-                    >
-                      Excluir
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div style={{ borderTop: '1px solid var(--primary-soft)', paddingTop: 12, display: 'grid', gap: 10 }}>
-            <strong>{editingQuestionId ? 'Editar pergunta' : 'Nova pergunta'}</strong>
-            <label>
-              Ordem
-              <input
-                type="number"
-                min={1}
-                value={questionOrder}
-                onChange={(e) => setQuestionOrder(Number(e.target.value) || 1)}
-              />
-            </label>
-            <label>
-              Enunciado
-              <textarea value={questionStatement} onChange={(e) => setQuestionStatement(e.target.value)} />
-            </label>
-            <label>
-              Resposta A
-              <input value={optionA} onChange={(e) => setOptionA(e.target.value)} />
-            </label>
-            <label>
-              Resposta B
-              <input value={optionB} onChange={(e) => setOptionB(e.target.value)} />
-            </label>
-            <label>
-              Resposta C
-              <input value={optionC} onChange={(e) => setOptionC(e.target.value)} />
-            </label>
-            <label>
-              Resposta D
-              <input value={optionD} onChange={(e) => setOptionD(e.target.value)} />
-            </label>
-            <label>
-              Resposta correta
-              <select
-                value={correctOption}
-                onChange={(e) => setCorrectOption(e.target.value as OptionKey)}
-              >
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-              </select>
-            </label>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <Button
-                loading={createQuestion.isPending || updateQuestion.isPending}
-                disabled={createQuestion.isPending || updateQuestion.isPending}
-                onClick={() => {
-                  if (!selectedQuizForQuestionsId) {
-                    window.alert('Quiz invalido.');
-                    return;
-                  }
-                  if (
-                    !questionStatement.trim() ||
-                    !optionA.trim() ||
-                    !optionB.trim() ||
-                    !optionC.trim() ||
-                    !optionD.trim()
-                  ) {
-                    window.alert('Preencha enunciado e todas as respostas.');
-                    return;
-                  }
-                  if (editingQuestionId) {
-                    updateQuestion.mutate(undefined, {
-                      onError: (error: any) => {
-                        window.alert(error?.response?.data?.message ?? 'Erro ao atualizar pergunta.');
-                      },
-                    });
-                    return;
-                  }
-
-                  createQuestion.mutate(undefined, {
-                    onError: (error: any) => {
-                      window.alert(error?.response?.data?.message ?? 'Erro ao cadastrar pergunta.');
-                    },
-                  });
-                }}
-              >
-                {editingQuestionId ? 'Salvar alteracoes' : 'Cadastrar pergunta'}
-              </Button>
-              {editingQuestionId && (
-                <Button style={{ background: 'var(--gray-1)' }} onClick={resetQuestionForm}>
-                  Cancelar edicao
-                </Button>
-              )}
-            </div>
-          </div>
         </div>
       </Modal>
 
@@ -779,15 +603,6 @@ export function CourseDetailsPage() {
             <textarea
               value={editingLessonDescription}
               onChange={(e) => setEditingLessonDescription(e.target.value)}
-            />
-          </label>
-          <label>
-            Ordem da aula
-            <input
-              type="number"
-              min={1}
-              value={editingLessonOrder}
-              onChange={(e) => setEditingLessonOrder(Number(e.target.value) || 1)}
             />
           </label>
           <label>

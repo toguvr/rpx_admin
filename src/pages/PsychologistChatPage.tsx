@@ -175,9 +175,10 @@ export function PsychologistChatPage() {
       </p>
 
       <div
+        className="chat-layout"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gridTemplateColumns: 'minmax(260px, 0.85fr) minmax(420px, 2.15fr)',
           gap: 12,
           minHeight: 0,
         }}

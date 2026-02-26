@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 import { api } from '@/services/api';
 
@@ -57,7 +58,9 @@ export function PsychologistsPage() {
             <strong>{psychologist.name}</strong>
             <p>{psychologist.email}</p>
             <Button
-              style={{ background: 'var(--error)' }}
+              variant="destructive"
+              aria-label="Excluir psicólogo"
+              title="Excluir psicólogo"
               onClick={() => {
                 if (!window.confirm('Deseja excluir este psicólogo?')) return;
                 setRemovingId(psychologist.id);
@@ -68,7 +71,7 @@ export function PsychologistsPage() {
               loading={remove.isPending && removingId === psychologist.id}
               disabled={remove.isPending}
             >
-              Excluir
+              <Icon name="trash" />
             </Button>
           </div>
         ))}

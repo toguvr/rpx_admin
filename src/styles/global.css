@@ -1,15 +1,32 @@
 :root {
-  --primary: #13a1c1;
-  --on-primary: #ffffff;
-  --text: #060708;
-  --gray-1: #484e50;
-  --gray-2: #98a8ab;
-  --background: #ecf2f2;
-  --primary-hover: #1089a5;
-  --primary-pressed: #0b6e85;
-  --primary-soft: #d9f2f7;
-  --success: #1f9d66;
-  --error: #c53a3a;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --primary: #0f766e;
+  --primary-foreground: #f8fafc;
+  --secondary: #334155;
+  --secondary-foreground: #f8fafc;
+  --accent: #e2e8f0;
+  --muted-foreground: #64748b;
+  --destructive: #b91c1c;
+  --destructive-foreground: #f8fafc;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #0f766e;
+  --button-default: var(--primary);
+  --button-secondary: var(--secondary);
+  --button-destructive: var(--destructive);
+
+  /* legacy aliases used by existing pages */
+  --on-primary: var(--primary-foreground);
+  --text: var(--foreground);
+  --gray-1: var(--muted-foreground);
+  --gray-2: #94a3b8;
+  --primary-hover: #0d665f;
+  --primary-pressed: #115e59;
+  --primary-soft: var(--accent);
+  --success: #15803d;
+  --error: var(--destructive);
 }
 
 * {
@@ -18,10 +35,10 @@
 
 body {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 16px;
-  color: var(--text);
-  background: linear-gradient(145deg, #ffffff, var(--background));
+  color: var(--foreground);
+  background: radial-gradient(circle at top right, #ecfeff 0%, var(--background) 40%);
   overflow-x: hidden;
 }
 
@@ -36,16 +53,16 @@ input,
 textarea,
 select {
   min-height: 44px;
-  border: 1px solid var(--gray-2);
-  border-radius: 10px;
+  border: 1px solid var(--input);
+  border-radius: 8px;
   padding: 10px 12px;
   width: 100%;
   background: #fff;
-  color: var(--text);
+  color: var(--foreground);
 }
 
 select option[disabled] {
-  color: var(--gray-2);
+  color: var(--muted-foreground);
 }
 
 button {
@@ -58,6 +75,10 @@ h1 {
 
 h2 {
   font-size: 22px;
+}
+
+a {
+  color: #0e7490;
 }
 
 #root {
@@ -78,6 +99,8 @@ h2 {
 .app-header {
   flex-wrap: wrap;
   gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 .app-sidebar {
@@ -92,7 +115,7 @@ h2 {
   display: none;
   min-height: 32px;
   width: 32px;
-  border: 1px solid var(--primary-soft);
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
@@ -101,6 +124,10 @@ h2 {
 @media (max-width: 960px) {
   .app-main {
     padding: 16px;
+  }
+
+  .chat-layout {
+    grid-template-columns: 1fr !important;
   }
 
   .app-sidebar.is-mobile {

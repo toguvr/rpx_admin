@@ -10,6 +10,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
 import { PsychologistChatPage } from '@/pages/PsychologistChatPage';
 import { PsychologistsPage } from '@/pages/PsychologistsPage';
+import { QuizDetailsPage } from '@/pages/QuizDetailsPage';
 import { RankingPage } from '@/pages/RankingPage';
 import { TeachersPage } from '@/pages/TeachersPage';
 import { useAuthStore } from '@/store/auth';
@@ -62,6 +63,14 @@ export function AppRoutes() {
                   element={
                     <RoleRoute routeKey="courses">
                       <CourseDetailsPage />
+                    </RoleRoute>
+                  }
+                />
+                <Route
+                  path="courses/:courseId/quizzes/:quizId"
+                  element={
+                    <RoleRoute routeKey="courses">
+                      <QuizDetailsPage />
                     </RoleRoute>
                   }
                 />

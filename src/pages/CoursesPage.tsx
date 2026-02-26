@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 import { api } from '@/services/api';
 
@@ -87,13 +88,15 @@ export function CoursesPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <Button onClick={() => navigate(`/courses/${course.id}`)}>Abrir curso</Button>
-                  <Button style={{ background: 'var(--gray-1)' }} onClick={() => openEditModal(course)}>
-                    Editar
+                  <Button variant="secondary" aria-label="Editar curso" title="Editar curso" onClick={() => openEditModal(course)}>
+                    <Icon name="edit" />
                   </Button>
                   <Button
-                    style={{ background: 'var(--error)' }}
+                    variant="destructive"
                     loading={deleteCourse.isPending}
                     disabled={deleteCourse.isPending}
+                    aria-label="Excluir curso"
+                    title="Excluir curso"
                     onClick={() => {
                       if (!window.confirm(`Deseja realmente excluir o curso "${course.title}"?`)) {
                         return;
@@ -105,7 +108,7 @@ export function CoursesPage() {
                       });
                     }}
                   >
-                    Excluir
+                    <Icon name="trash" />
                   </Button>
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
 import { api } from '@/services/api';
 
@@ -133,7 +134,7 @@ export function ImportsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Alunos</h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Button style={{ background: 'var(--gray-1)' }} onClick={() => setGroupModalOpen(true)}>
+          <Button variant="secondary" onClick={() => setGroupModalOpen(true)}>
             Criar lote
           </Button>
           <Button onClick={() => setModalOpen(true)}>Adicionar aluno manualmente</Button>
@@ -186,7 +187,7 @@ export function ImportsPage() {
                     <td>{group.isActive ? 'Ativo' : 'Inativo'}</td>
                     <td style={{ padding: '8px 0' }}>
                       <Button
-                        style={{ background: group.isActive ? 'var(--error)' : 'var(--success)' }}
+                        variant={group.isActive ? 'destructive' : 'default'}
                         loading={toggleGroupStatus.isPending}
                         disabled={toggleGroupStatus.isPending}
                         onClick={() =>
@@ -235,11 +236,16 @@ export function ImportsPage() {
                     <td>{student.isActive ? 'Ativo' : 'Inativo'}</td>
                     <td style={{ padding: '8px 0' }}>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <Button style={{ background: 'var(--gray-1)' }} onClick={() => openEditStudent(student)}>
-                          Editar
+                        <Button
+                          variant="secondary"
+                          aria-label="Editar aluno"
+                          title="Editar aluno"
+                          onClick={() => openEditStudent(student)}
+                        >
+                          <Icon name="edit" />
                         </Button>
                         <Button
-                          style={{ background: student.isActive ? 'var(--error)' : 'var(--success)' }}
+                          variant={student.isActive ? 'destructive' : 'default'}
                           loading={toggleStudentStatus.isPending}
                           disabled={toggleStudentStatus.isPending}
                           onClick={() =>
@@ -256,9 +262,11 @@ export function ImportsPage() {
                           {student.isActive ? 'Desativar' : 'Ativar'}
                         </Button>
                         <Button
-                          style={{ background: 'var(--error)' }}
+                          variant="destructive"
                           loading={deleteStudent.isPending}
                           disabled={deleteStudent.isPending}
+                          aria-label="Excluir aluno"
+                          title="Excluir aluno"
                           onClick={() => {
                             if (!window.confirm(`Deseja excluir o aluno "${student.name}"?`)) return;
                             deleteStudent.mutate(student.id, {
@@ -268,7 +276,7 @@ export function ImportsPage() {
                             });
                           }}
                         >
-                          Excluir
+                          <Icon name="trash" />
                         </Button>
                       </div>
                     </td>
@@ -310,7 +318,7 @@ export function ImportsPage() {
               ))}
             </select>
           </label>
-          <Button style={{ background: 'var(--gray-1)' }} onClick={() => setGroupModalOpen(true)}>
+          <Button variant="secondary" onClick={() => setGroupModalOpen(true)}>
             Criar novo lote
           </Button>
           <Button

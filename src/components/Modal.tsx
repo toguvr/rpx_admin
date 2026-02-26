@@ -19,7 +19,7 @@ export function Modal({ title, open, onClose, width = 560, children }: Props) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(6, 7, 8, 0.45)',
+        background: 'rgba(2, 8, 23, 0.65)',
         display: 'grid',
         placeItems: 'center',
         zIndex: 1000,
@@ -33,9 +33,9 @@ export function Modal({ title, open, onClose, width = 560, children }: Props) {
           width: '100%',
           maxWidth: width,
           maxHeight: 'calc(100vh - 32px)',
-          background: '#fff',
-          borderRadius: 16,
-          border: '1px solid var(--primary-soft)',
+          background: 'var(--card)',
+          borderRadius: 10,
+          border: '1px solid var(--border)',
           padding: 16,
           display: 'grid',
           gap: 12,
@@ -44,7 +44,7 @@ export function Modal({ title, open, onClose, width = 560, children }: Props) {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
           <h2 style={{ margin: 0 }}>{title}</h2>
-          <Button style={{ background: 'var(--gray-1)' }} onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Fechar
           </Button>
         </div>
