@@ -130,9 +130,9 @@ export function ImportsPage() {
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Alunos</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Button style={{ background: 'var(--gray-1)' }} onClick={() => setGroupModalOpen(true)}>
             Criar lote
           </Button>

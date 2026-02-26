@@ -28,26 +28,28 @@ export function RankingPage() {
       <h1>Ranking</h1>
       <Button onClick={exportCsv}>Exportar CSV</Button>
       <Card>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th align="left">Posicao</th>
-              <th align="left">Nome</th>
-              <th align="left">Eficiencia</th>
-              <th align="left">Media quiz</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.map((row: any) => (
-              <tr key={row.userId}>
-                <td>{row.position}</td>
-                <td>{row.name}</td>
-                <td>{row.efficiency}</td>
-                <td>{row.quizAverage}</td>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+            <thead>
+              <tr>
+                <th align="left">Posicao</th>
+                <th align="left">Nome</th>
+                <th align="left">Eficiencia</th>
+                <th align="left">Media quiz</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data?.map((row: any) => (
+                <tr key={row.userId}>
+                  <td>{row.position}</td>
+                  <td>{row.name}</td>
+                  <td>{row.efficiency}</td>
+                  <td>{row.quizAverage}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
     </div>
   );

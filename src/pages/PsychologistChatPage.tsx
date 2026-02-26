@@ -177,9 +177,9 @@ export function PsychologistChatPage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '320px 1fr',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: 12,
-          minHeight: 560,
+          minHeight: 0,
         }}
       >
         <Card style={{ padding: 0, overflow: 'hidden' }}>
@@ -245,7 +245,7 @@ export function PsychologistChatPage() {
                       border: `1px solid ${mine ? 'var(--primary)' : 'var(--primary-soft)'}`,
                       borderRadius: 12,
                       padding: '10px 12px',
-                      maxWidth: '70%',
+                      maxWidth: 'min(85%, 640px)',
                     }}
                   >
                     <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{message.sender?.name}</div>

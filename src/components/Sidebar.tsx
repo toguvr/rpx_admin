@@ -14,13 +14,29 @@ const items = [
   { to: '/psychologist-chat', label: 'Atendimentos', key: 'psychologist-chat' },
 ];
 
-export function Sidebar() {
+type SidebarProps = {
+  isMobile?: boolean;
+  mobileOpen?: boolean;
+  onClose?: () => void;
+};
+
+export function Sidebar({ isMobile = false, mobileOpen = false, onClose }: SidebarProps) {
   const role = useAuthStore((state) => state.user?.role);
   const visibleItems = items.filter((item) => hasAccess(role, item.key));
 
   return (
-    <aside style={{ width: 280, background: '#fff', borderRight: '1px solid #d9e5e8', padding: 18 }}>
-      <h1 style={{ marginTop: 0 }}>RPX Cursos</h1>
+    <aside
+      className={`app-sidebar ${isMobile ? 'is-mobile' : ''} ${mobileOpen ? 'is-open' : ''}`}
+      style={{ width: 280, background: '#fff', borderRight: '1px solid #d9e5e8', padding: 18 }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <h1 style={{ marginTop: 0, marginBottom: 0 }}>RPX Cursos</h1>
+        {isMobile && (
+          <button className="sidebar-close-button" type="button" onClick={onClose} aria-label="Fechar menu">
+            ✕
+          </button>
+        )}
+      </div>
       <p style={{ color: 'var(--gray-1)' }}>Painel Admin</p>
 
       <nav style={{ display: 'grid', gap: 8, marginTop: 20 }}>
@@ -28,6 +44,9 @@ export function Sidebar() {
           <NavLink
             key={item.to}
             to={item.to}
+            onClick={() => {
+              if (isMobile) onClose?.();
+            }}
             style={({ isActive }) => ({
               textDecoration: 'none',
               color: 'var(--text)',

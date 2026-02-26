@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from 'react';
+import { useEffect, useState, type PropsWithChildren } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/Button';
@@ -8,24 +8,52 @@ import { useAuthStore } from '@/store/auth';
 export function AppLayout({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 960);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const onResize = () => {
+      const mobile = window.innerWidth <= 960;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
-      <main style={{ flex: 1, padding: 24 }}>
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <div className="app-shell">
+      {isMobile && mobileMenuOpen && (
+        <button type="button" className="app-sidebar-overlay" onClick={() => setMobileMenuOpen(false)} />
+      )}
+      <Sidebar isMobile={isMobile} mobileOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+      <main className="app-main">
+        <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <strong>{user?.name}</strong>
             <p style={{ margin: 0, color: 'var(--gray-1)' }}>{user?.role}</p>
           </div>
-          <Button
-            onClick={() => {
-              logout();
-              navigate('/');
-            }}
-          >
-            Sair
-          </Button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {isMobile && (
+              <Button
+                onClick={() => setMobileMenuOpen((prev) => !prev)}
+                style={{ background: 'var(--gray-1)' }}
+              >
+                Menu
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                logout();
+                navigate('/');
+              }}
+            >
+              Sair
+            </Button>
+          </div>
         </header>
         {children}
       </main>

@@ -37,7 +37,7 @@ export function TeachersPage() {
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Professores</h1>
         <Button onClick={() => setModalOpen(true)}>Adicionar professor</Button>
       </div>

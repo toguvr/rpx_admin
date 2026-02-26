@@ -37,7 +37,7 @@ export function PsychologistsPage() {
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Psicólogos</h1>
         <Button onClick={() => setModalOpen(true)}>Adicionar psicólogo</Button>
       </div>
