@@ -206,7 +206,7 @@ export function DashboardPage() {
           title="Dashboard"
           description="Visão executiva e operacional com eficiência, progresso e riscos da plataforma."
           actions={
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <Button variant="outline" onClick={retryAll}>
                 <RefreshCcw size={16} />
                 Atualizar
@@ -302,15 +302,19 @@ export function DashboardPage() {
             title="Tendência do período"
             description="Acompanhe o ritmo diário/semanal de atividade."
             action={
-              <div className="flex items-center gap-2">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                 <Tabs value={timeseriesMetric} onValueChange={(value) => setTimeseriesMetric(value as TimeseriesMetric)}>
-                  <TabsList>
+                  <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
                     <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
                     <TabsTrigger value="lessons">Aulas</TabsTrigger>
                     <TabsTrigger value="signups">Cadastros</TabsTrigger>
                   </TabsList>
                 </Tabs>
-                <Select value={groupBy} onChange={(event) => setGroupBy(event.target.value as 'day' | 'week')}>
+                <Select
+                  className="w-full sm:w-[120px]"
+                  value={groupBy}
+                  onChange={(event) => setGroupBy(event.target.value as 'day' | 'week')}
+                >
                   <option value="day">Dia</option>
                   <option value="week">Semana</option>
                 </Select>
@@ -400,7 +404,7 @@ export function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={psychologistRiskQuery.data?.buckets ?? []}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} interval={0} angle={-15} textAnchor="end" height={60} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} angle={-10} textAnchor="end" height={56} />
                   <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                   <RechartsTooltip />
                   <Bar dataKey="value" fill="#ef4444" radius={[6, 6, 0, 0]} />
@@ -416,7 +420,7 @@ export function DashboardPage() {
           <ChartCard title="Top cursos" description="Comparativo orientado por objetivo de gestão.">
             <div className="mb-3">
               <Tabs value={topBy} onValueChange={(value) => setTopBy(value as TopCoursesBy)}>
-                <TabsList>
+                <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
                   <TabsTrigger value="efficiency">Eficiência</TabsTrigger>
                   <TabsTrigger value="completion">Conclusão</TabsTrigger>
                   <TabsTrigger value="engagement">Engajamento</TabsTrigger>

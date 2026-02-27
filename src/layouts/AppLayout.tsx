@@ -51,7 +51,7 @@ export function AppLayout({ children }: PropsWithChildren) {
       }
       topbar={
         <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
-          <div className="container flex h-16 items-center justify-between gap-3">
+          <div className="mx-auto flex h-auto min-h-16 w-full max-w-[1600px] flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-4 lg:px-6">
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menu">
                 <Menu size={18} />
@@ -70,7 +70,7 @@ export function AppLayout({ children }: PropsWithChildren) {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <Button variant="ghost" size="icon" aria-label="Notificações">
                 <Bell size={18} />
               </Button>
@@ -92,7 +92,7 @@ export function AppLayout({ children }: PropsWithChildren) {
                 size="sm"
               >
                 <LogOut size={16} />
-                Sair
+                <span className="hidden sm:inline">Sair</span>
               </Button>
             </div>
           </div>

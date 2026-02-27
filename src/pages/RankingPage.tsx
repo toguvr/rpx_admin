@@ -63,32 +63,34 @@ export function RankingPage() {
           <EmptyState title="Sem dados de ranking" description="As métricas serão exibidas quando houver tentativas de quiz." />
         ) : null}
         {!!data?.length && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Posição</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Eficiência</TableHead>
-                <TableHead>Quiz final</TableHead>
-                <TableHead>Evolução</TableHead>
-                <TableHead>Aulas assistidas</TableHead>
-                <TableHead>Cursos concluídos</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data?.map((row: any) => (
-                <TableRow key={row.userId}>
-                  <TableCell>{row.position}</TableCell>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell>{row.efficiency}%</TableCell>
-                  <TableCell>{row.finalQuizScore}%</TableCell>
-                  <TableCell>{row.quizImprovement >= 0 ? `+${row.quizImprovement}%` : `${row.quizImprovement}%`}</TableCell>
-                  <TableCell>{row.completedLessons}</TableCell>
-                  <TableCell>{row.coursesCompleted}</TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[760px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Posição</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Eficiência</TableHead>
+                  <TableHead>Quiz final</TableHead>
+                  <TableHead>Evolução</TableHead>
+                  <TableHead>Aulas assistidas</TableHead>
+                  <TableHead>Cursos concluídos</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data?.map((row: any) => (
+                  <TableRow key={row.userId}>
+                    <TableCell>{row.position}</TableCell>
+                    <TableCell>{row.name}</TableCell>
+                    <TableCell>{row.efficiency}%</TableCell>
+                    <TableCell>{row.finalQuizScore}%</TableCell>
+                    <TableCell>{row.quizImprovement >= 0 ? `+${row.quizImprovement}%` : `${row.quizImprovement}%`}</TableCell>
+                    <TableCell>{row.completedLessons}</TableCell>
+                    <TableCell>{row.coursesCompleted}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </SectionCard>
     </div>
