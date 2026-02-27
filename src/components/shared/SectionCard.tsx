@@ -16,14 +16,14 @@ export function SectionCard({
   className?: string;
 }) {
   return (
-    <Card className={className}>
+    <Card className={['min-w-0 max-w-full overflow-hidden', className].filter(Boolean).join(' ')}>
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <CardTitle>{title}</CardTitle>
             {description ? <CardDescription>{description}</CardDescription> : null}
           </div>
-          {action ? <div className="sm:ml-auto">{action}</div> : null}
+          {action ? <div className="min-w-0 sm:ml-auto">{action}</div> : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-4 overflow-x-auto">{children}</CardContent>

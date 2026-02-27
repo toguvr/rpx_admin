@@ -183,7 +183,7 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-6">
+      <div className="grid min-w-0 gap-6">
         <PageHeader title="Dashboard" description="Indicadores executivos e operacionais da plataforma." />
         <LoadingSkeletonDashboard />
       </div>
@@ -192,7 +192,7 @@ export function DashboardPage() {
 
   if (hasError || !summary) {
     return (
-      <div className="grid gap-6">
+      <div className="grid min-w-0 gap-6">
         <PageHeader title="Dashboard" description="Indicadores executivos e operacionais da plataforma." />
         <ErrorState message="Falha ao carregar métricas do dashboard." onRetry={retryAll} />
       </div>
@@ -201,7 +201,7 @@ export function DashboardPage() {
 
   return (
     <TooltipProvider>
-      <div className="grid gap-6">
+      <div className="grid min-w-0 gap-6">
         <PageHeader
           title="Dashboard"
           description="Visão executiva e operacional com eficiência, progresso e riscos da plataforma."
@@ -244,7 +244,7 @@ export function DashboardPage() {
           onReset={resetFilters}
         />
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4 [&>*]:min-w-0">
           <KPIStatCard
             title="Alunos ativos"
             value={String(summary.activeStudents)}
@@ -297,7 +297,7 @@ export function DashboardPage() {
           />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-2 [&>*]:min-w-0">
           <ChartCard
             title="Tendência do período"
             description="Acompanhe o ritmo diário/semanal de atividade."
@@ -365,7 +365,7 @@ export function DashboardPage() {
           </ChartCard>
         </div>
 
-        <div className={`grid gap-4 ${role === 'ADMIN' || role === 'PSICOLOGO' ? 'xl:grid-cols-3' : 'xl:grid-cols-2'}`}>
+        <div className={`grid min-w-0 gap-4 [&>*]:min-w-0 ${role === 'ADMIN' || role === 'PSICOLOGO' ? 'xl:grid-cols-3' : 'xl:grid-cols-2'}`}>
           <ChartCard title="Eficiência por curso" description="Top cursos no recorte selecionado.">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={efficiencyByCourse}>
@@ -416,7 +416,7 @@ export function DashboardPage() {
 
         <Separator />
 
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-3 [&>*]:min-w-0">
           <ChartCard title="Top cursos" description="Comparativo orientado por objetivo de gestão.">
             <div className="mb-3">
               <Tabs value={topBy} onValueChange={(value) => setTopBy(value as TopCoursesBy)}>

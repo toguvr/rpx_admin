@@ -15,7 +15,7 @@ export function ChartCard({
 }) {
   return (
     <SectionCard title={title} description={description} action={action} className="h-full border-border/70 bg-card/95">
-      <div className="h-[300px] w-full">{children}</div>
+      <div className="h-[280px] w-full min-w-0 overflow-hidden sm:h-[300px]">{children}</div>
     </SectionCard>
   );
 }

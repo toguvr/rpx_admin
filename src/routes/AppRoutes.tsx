@@ -6,6 +6,7 @@ import { CoursesPage } from '@/pages/CoursesPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ForumPage } from '@/pages/ForumPage';
 import { ImportsPage } from '@/pages/ImportsPage';
+import { InviteActivationPage } from '@/pages/InviteActivationPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
 import { PsychologistChatPage } from '@/pages/PsychologistChatPage';
@@ -35,6 +36,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LoginPage />} />
+      <Route path="/invite" element={<InviteActivationPage />} />
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
       <Route
         path="/*"

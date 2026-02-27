@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Pencil, Plus, Upload, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 import { Button } from '@/components/Button';
 import { Modal } from '@/components/Modal';
@@ -39,7 +40,7 @@ export function ImportsPage() {
       name: string;
       email: string;
       group: string;
-      status: 'VALID' | 'INVALID';
+      status: 'VALID' | 'INVALID' | 'SKIPPED';
       message: string;
     }>;
   } | null>(null);
@@ -132,13 +133,13 @@ export function ImportsPage() {
     },
   });
 
-  async function upload(file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
-
+  async function upload(rows: Array<{ rowNumber: number; name: string; email: string; group: string }>, fileName: string) {
     try {
       setUploading(true);
-      const { data } = await api.post('/imports/students', formData);
+      const { data } = await api.post('/imports/students/register', {
+        fileName,
+        rows,
+      });
       setResult(data);
       qc.invalidateQueries({ queryKey: ['students'] });
       qc.invalidateQueries({ queryKey: ['groups'] });
@@ -148,22 +149,111 @@ export function ImportsPage() {
     }
   }
 
-  const previewImport = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      const { data } = await api.post('/imports/students/preview', formData);
-      return data;
-    },
-    onSuccess: (data) => {
-      setPreview(data);
+  function normalizeHeader(value: string) {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  function cellToString(value: unknown) {
+    if (value === null || value === undefined) return '';
+    return String(value).trim();
+  }
+
+  async function previewImport(file: File) {
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+
+      if (!sheetName) {
+        throw new Error('Arquivo sem planilha válida.');
+      }
+
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
+        header: 1,
+        blankrows: false,
+        defval: '',
+      });
+
+      const header = (rows[0] ?? []).map((item) => normalizeHeader(String(item ?? '')));
+      const nameIndex = header.findIndex((item) => ['name', 'nome'].includes(item));
+      const emailIndex = header.findIndex((item) => ['email', 'mail', 'emailaddress'].includes(item));
+      const groupIndex = header.findIndex((item) => ['group', 'lote', 'grupo', 'batch', 'turma'].includes(item));
+
+      if (nameIndex < 0 || emailIndex < 0) {
+        throw new Error('Planilha deve conter colunas name e email.');
+      }
+
+      const parsedRows: Array<{
+        rowNumber: number;
+        name: string;
+        email: string;
+        group: string;
+        status: 'VALID' | 'INVALID' | 'SKIPPED';
+        message: string;
+      }> = [];
+
+      let validCount = 0;
+      let invalidCount = 0;
+
+      rows.slice(1).forEach((row, index) => {
+        const rowNumber = index + 2;
+        const name = cellToString(row[nameIndex] ?? '');
+        const email = cellToString(row[emailIndex] ?? '').toLowerCase();
+        const group = groupIndex >= 0 ? cellToString(row[groupIndex] ?? '') : '';
+
+        if (!name && !email && !group) {
+          parsedRows.push({
+            rowNumber,
+            name,
+            email,
+            group,
+            status: 'SKIPPED',
+            message: 'Linha vazia descartada.',
+          });
+          return;
+        }
+
+        if (!name || !email) {
+          invalidCount += 1;
+          parsedRows.push({
+            rowNumber,
+            name,
+            email,
+            group,
+            status: 'INVALID',
+            message: 'Nome ou e-mail ausente.',
+          });
+          return;
+        }
+
+        validCount += 1;
+        parsedRows.push({
+          rowNumber,
+          name,
+          email,
+          group,
+          status: 'VALID',
+          message: 'Pronto para importação.',
+        });
+      });
+
+      setPreview({
+        fileName: file.name,
+        totalRows: parsedRows.length,
+        validCount,
+        invalidCount,
+        rows: parsedRows,
+      });
       toast.success('Pré-visualização pronta.');
-    },
-    onError: (error: any) => {
+    } catch (error: any) {
       setPreview(null);
-      toast.error(error?.response?.data?.message ?? 'Nao foi possivel ler a planilha.');
-    },
-  });
+      toast.error(error?.message ?? 'Nao foi possivel ler a planilha.');
+    }
+  }
 
   function openEditStudent(student: any) {
     setEditingStudentId(student.id);
@@ -197,7 +287,7 @@ export function ImportsPage() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid min-w-0 gap-6">
       <PageHeader
         title="Alunos"
         description="Importação, lotes e gerenciamento de cadastros."
@@ -220,14 +310,14 @@ export function ImportsPage() {
           <Input
             type="file"
             accept=".xlsx"
-            disabled={uploading || previewImport.isPending}
+            disabled={uploading}
             className="max-w-md"
-            onChange={(e) => {
+            onChange={async (e) => {
               const file = e.target.files?.[0];
               setSelectedFile(file ?? null);
               setResult(null);
               if (file) {
-                previewImport.mutate(file);
+                await previewImport(file);
               } else {
                 setPreview(null);
               }
@@ -235,7 +325,7 @@ export function ImportsPage() {
           />
           <Badge variant="outline">
             <Upload size={14} className="mr-1" />
-            {previewImport.isPending ? 'Lendo planilha...' : uploading ? 'Enviando...' : 'Pronto para upload'}
+            {uploading ? 'Enviando...' : 'Pronto para upload'}
           </Badge>
           <Button variant="secondary" onClick={downloadImportTemplate}>
             <Download size={16} />
@@ -258,10 +348,18 @@ export function ImportsPage() {
                   toast.error('Selecione um arquivo .xlsx para importar.');
                   return;
                 }
-                upload(selectedFile);
+                const validRows = preview.rows
+                  .filter((row) => row.status === 'VALID')
+                  .map((row) => ({
+                    rowNumber: row.rowNumber,
+                    name: row.name,
+                    email: row.email,
+                    group: row.group,
+                  }));
+                upload(validRows, selectedFile.name);
               }}
               loading={uploading}
-              disabled={!selectedFile || uploading || previewImport.isPending || preview.validCount === 0}
+              disabled={!selectedFile || uploading || preview.validCount === 0}
               className="w-full sm:w-auto"
             >
               <Upload size={16} />
@@ -294,8 +392,16 @@ export function ImportsPage() {
                     <TableCell>{row.email || '-'}</TableCell>
                     <TableCell>{row.group || '-'}</TableCell>
                     <TableCell>
-                      <Badge variant={row.status === 'VALID' ? 'secondary' : 'destructive'}>
-                        {row.status === 'VALID' ? 'Válida' : 'Inválida'}
+                      <Badge
+                        variant={
+                          row.status === 'VALID'
+                            ? 'secondary'
+                            : row.status === 'SKIPPED'
+                              ? 'outline'
+                              : 'destructive'
+                        }
+                      >
+                        {row.status === 'VALID' ? 'Válida' : row.status === 'SKIPPED' ? 'Descartada' : 'Inválida'}
                       </Badge>
                     </TableCell>
                     <TableCell>{row.message}</TableCell>

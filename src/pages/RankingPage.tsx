@@ -44,7 +44,7 @@ export function RankingPage() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid min-w-0 gap-6">
       <PageHeader
         title="Ranking"
         description="Classificação por eficiência considerando quiz final, progresso nas aulas e evolução (final - inicial)."
@@ -63,7 +63,7 @@ export function RankingPage() {
           <EmptyState title="Sem dados de ranking" description="As métricas serão exibidas quando houver tentativas de quiz." />
         ) : null}
         {!!data?.length && (
-          <div className="overflow-x-auto">
+          <div className="min-w-0 overflow-x-auto">
             <Table className="min-w-[620px] sm:min-w-[760px]">
               <TableHeader>
                 <TableRow>
