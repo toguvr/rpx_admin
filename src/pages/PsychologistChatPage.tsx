@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { CircleDot } from 'lucide-react';
 
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { SectionCard } from '@/components/shared/SectionCard';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 
@@ -153,43 +158,49 @@ export function PsychologistChatPage() {
         body: body.trim(),
       });
       setBody('');
+      await loadThreads();
     } finally {
       setSending(false);
     }
   }
 
+  function riskBadge(thread: any) {
+    const risk = thread?.risk;
+    if (!risk?.waitingPsychologistResponse) {
+      return <Badge variant="secondary">Sem risco</Badge>;
+    }
+
+    if (risk.level === 'HIGH') {
+      return <Badge variant="destructive">{`Risco alto (${risk.waitingHours}h)`}</Badge>;
+    }
+
+    if (risk.level === 'MEDIUM') {
+      return <Badge className="bg-amber-500 text-white hover:bg-amber-500">{`Risco médio (${risk.waitingHours}h)`}</Badge>;
+    }
+
+    if (risk.level === 'LOW') {
+      return <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">{`Risco baixo (${risk.waitingHours}h)`}</Badge>;
+    }
+
+    return <Badge variant="secondary">{`Aguardando (${risk.waitingHours}h)`}</Badge>;
+  }
+
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h1>Atendimento Psicológico</h1>
-      <p style={{ margin: 0, color: 'var(--gray-1)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: 999,
-            display: 'inline-block',
-            background: online ? '#1f9d66' : '#c53a3a',
-          }}
-        />
+    <div className="grid gap-6">
+      <PageHeader
+        title="Atendimento Psicológico"
+        description="Central de conversas em tempo real entre alunos e psicólogos."
+      />
+
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <CircleDot className={online ? 'text-green-600' : 'text-red-600'} size={14} />
         Psicólogos {online ? 'online' : 'offline'}
-      </p>
+      </div>
 
-      <div
-        className="chat-layout"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(260px, 0.85fr) minmax(420px, 2.15fr)',
-          gap: 12,
-          minHeight: 0,
-        }}
-      >
-        <Card style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: 12, borderBottom: '1px solid var(--primary-soft)' }}>
-            <strong>Conversas</strong>
-          </div>
-
-          <div style={{ display: 'grid' }}>
-            {loadingThreads && <p style={{ padding: 12 }}>Carregando...</p>}
+      <div className="chat-layout grid gap-4">
+        <SectionCard title="Conversas" description="Threads ativas e histórico recente.">
+          <div className="grid">
+            {loadingThreads && <p className="p-3 text-sm text-muted-foreground">Carregando...</p>}
 
             {!loadingThreads &&
               threads.map((thread) => {
@@ -200,38 +211,32 @@ export function PsychologistChatPage() {
                   <button
                     key={thread.id}
                     onClick={() => setSelectedThreadId(thread.id)}
-                    style={{
-                      border: 'none',
-                      borderBottom: '1px solid var(--primary-soft)',
-                      background: active ? 'var(--primary-soft)' : '#fff',
-                      textAlign: 'left',
-                      padding: 12,
-                      cursor: 'pointer',
-                    }}
+                    className={`border-b p-3 text-left transition ${active ? 'bg-primary/10' : 'hover:bg-muted/40'}`}
                   >
-                    <div style={{ fontWeight: 700 }}>{thread.user?.name ?? 'Aluno'}</div>
-                    <div style={{ color: 'var(--gray-1)', marginTop: 4, fontSize: 14 }}>
-                      {lastMessage?.body ?? 'Conversa iniciada'}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-semibold">{thread.user?.name ?? 'Aluno'}</div>
+                      <div>{riskBadge(thread)}</div>
                     </div>
+                    <div className="mt-1 truncate text-sm text-muted-foreground">{lastMessage?.body ?? 'Conversa iniciada'}</div>
                   </button>
                 );
               })}
 
-            {!loadingThreads && threads.length === 0 && <p style={{ padding: 12 }}>Sem conversas no momento.</p>}
+            {!loadingThreads && threads.length === 0 && <p className="p-3 text-sm text-muted-foreground">Sem conversas no momento.</p>}
           </div>
-        </Card>
+        </SectionCard>
 
-        <Card style={{ display: 'grid', gridTemplateRows: 'auto 1fr auto', gap: 12 }}>
-          <div style={{ borderBottom: '1px solid var(--primary-soft)', paddingBottom: 8 }}>
+        <Card className="grid grid-rows-[auto_1fr_auto] gap-3 p-4">
+          <div className="border-b pb-2">
             <strong>{selectedThread?.user?.name ?? 'Selecione uma conversa'}</strong>
           </div>
 
           <div
             ref={messagesContainerRef}
-            style={{ overflow: 'auto', maxHeight: 420, display: 'grid', gap: 8, alignContent: 'start' }}
+            className="grid max-h-[520px] gap-2 overflow-auto rounded-md border bg-muted/10 p-3"
           >
-            {loadingMessages && <p>Carregando mensagens...</p>}
-            {!loadingMessages && messages.length === 0 && <p>Nenhuma mensagem ainda.</p>}
+            {loadingMessages && <p className="text-sm text-muted-foreground">Carregando mensagens...</p>}
+            {!loadingMessages && messages.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma mensagem ainda.</p>}
 
             {!loadingMessages &&
               messages.map((message) => {
@@ -239,31 +244,23 @@ export function PsychologistChatPage() {
                 return (
                   <div
                     key={message.id}
-                    style={{
-                      justifySelf: mine ? 'end' : 'start',
-                      background: mine ? 'var(--primary)' : '#fff',
-                      color: mine ? '#fff' : 'var(--text)',
-                      border: `1px solid ${mine ? 'var(--primary)' : 'var(--primary-soft)'}`,
-                      borderRadius: 12,
-                      padding: '10px 12px',
-                      maxWidth: 'min(85%, 640px)',
-                    }}
+                    className={`max-w-[85%] rounded-xl border px-3 py-2 ${mine ? 'justify-self-end border-primary bg-primary text-primary-foreground' : 'justify-self-start bg-card'}`}
                   >
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{message.sender?.name}</div>
-                    <div>{message.body}</div>
+                    <div className="mb-1 text-xs font-semibold opacity-80">{message.sender?.name}</div>
+                    <div className="text-sm">{message.body}</div>
                   </div>
                 );
               })}
           </div>
 
-          <div style={{ display: 'grid', gap: 8 }}>
-            <label style={{ fontWeight: 700 }}>Responder</label>
-            <textarea
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Responder</label>
+            <Textarea
               value={body}
               onChange={(event) => setBody(event.target.value)}
               placeholder="Digite uma resposta clara e acolhedora"
               disabled={!selectedThreadId}
-              style={{ minHeight: 90 }}
+              className="min-h-[96px]"
             />
             <Button onClick={sendMessage} disabled={!selectedThreadId || !body.trim() || sending} loading={sending}>
               Enviar mensagem

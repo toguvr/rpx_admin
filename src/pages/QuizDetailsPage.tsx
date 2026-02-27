@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
+import { FormField } from '@/components/shared/FormField';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/services/api';
 
 type OptionKey = 'A' | 'B' | 'C' | 'D';
@@ -39,12 +44,19 @@ export function QuizDetailsPage() {
   const [editingQuizMaxAttempts, setEditingQuizMaxAttempts] = useState(1);
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
   const [draggingQuestionId, setDraggingQuestionId] = useState('');
+  const [dragOverQuestionId, setDragOverQuestionId] = useState('');
+  const [questionOrderBeforeDrag, setQuestionOrderBeforeDrag] = useState<string[]>([]);
+  const [orderedQuestions, setOrderedQuestions] = useState<any[]>([]);
 
   useEffect(() => {
     if (quiz?.maxAttempts) {
       setEditingQuizMaxAttempts(quiz.maxAttempts);
     }
   }, [quiz]);
+
+  useEffect(() => {
+    setOrderedQuestions([...(questions ?? [])].sort((a: any, b: any) => a.order - b.order));
+  }, [questions]);
 
   function resetQuestionForm() {
     setEditingQuestionId('');
@@ -73,7 +85,7 @@ export function QuizDetailsPage() {
     mutationFn: async () => api.put(`/quizzes/${quizId}`, { maxAttempts: editingQuizMaxAttempts }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['courses'] });
-      window.alert('Quiz atualizado com sucesso.');
+      toast.success('Quiz atualizado com sucesso.');
     },
   });
 
@@ -91,7 +103,7 @@ export function QuizDetailsPage() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['quiz-questions', quizId] });
-      window.alert('Pergunta cadastrada com sucesso.');
+      toast.success('Pergunta cadastrada com sucesso.');
       resetQuestionForm();
     },
   });
@@ -109,7 +121,7 @@ export function QuizDetailsPage() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['quiz-questions', quizId] });
-      window.alert('Pergunta atualizada com sucesso.');
+      toast.success('Pergunta atualizada com sucesso.');
       resetQuestionForm();
     },
   });
@@ -118,7 +130,7 @@ export function QuizDetailsPage() {
     mutationFn: async (questionId: string) => api.delete(`/quizzes/questions/${questionId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['quiz-questions', quizId] });
-      window.alert('Pergunta excluida com sucesso.');
+      toast.success('Pergunta excluida com sucesso.');
     },
   });
 
@@ -142,8 +154,6 @@ export function QuizDetailsPage() {
       </div>
     );
   }
-
-  const orderedQuestions = [...(questions ?? [])].sort((a: any, b: any) => a.order - b.order);
 
   function reorderList<T extends { id: string }>(items: T[], fromId: string, toId: string) {
     const from = items.findIndex((item) => item.id === fromId);
@@ -169,27 +179,29 @@ export function QuizDetailsPage() {
 
       <Card>
         <h2>Configuração</h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
-          <label style={{ minWidth: 220 }}>
-            Máximo de tentativas
-            <input
-              type="number"
-              min={1}
-              value={editingQuizMaxAttempts}
-              onChange={(e) => setEditingQuizMaxAttempts(Number(e.target.value) || 1)}
-            />
-          </label>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[220px]">
+            <FormField id="quiz-max-attempts" label="Máximo de tentativas">
+              <Input
+                id="quiz-max-attempts"
+                type="number"
+                min={1}
+                value={editingQuizMaxAttempts}
+                onChange={(e) => setEditingQuizMaxAttempts(Number(e.target.value) || 1)}
+              />
+            </FormField>
+          </div>
           <Button
             loading={updateQuiz.isPending}
             disabled={updateQuiz.isPending}
             onClick={() => {
               if (editingQuizMaxAttempts < 1) {
-                window.alert('Informe um máximo de tentativas válido.');
+                toast.error('Informe um máximo de tentativas válido.');
                 return;
               }
               updateQuiz.mutate(undefined, {
                 onError: (error: any) => {
-                  window.alert(error?.response?.data?.message ?? 'Erro ao atualizar quiz.');
+                  toast.error(error?.response?.data?.message ?? 'Erro ao atualizar quiz.');
                 },
               });
             }}
@@ -218,19 +230,67 @@ export function QuizDetailsPage() {
               <div
                 key={question.id}
                 draggable
-                onDragStart={() => setDraggingQuestionId(question.id)}
-                onDragOver={(event) => event.preventDefault()}
+                onDragStart={() => {
+                  setDraggingQuestionId(question.id);
+                  setQuestionOrderBeforeDrag(orderedQuestions.map((item: any) => item.id));
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  if (!draggingQuestionId || draggingQuestionId === question.id || reorderQuestions.isPending) return;
+                  setDragOverQuestionId(question.id);
+                  setOrderedQuestions((prev) => reorderList(prev, draggingQuestionId, question.id));
+                }}
+                onDragLeave={() => {
+                  if (dragOverQuestionId === question.id) {
+                    setDragOverQuestionId('');
+                  }
+                }}
                 onDrop={() => {
-                  if (!draggingQuestionId || draggingQuestionId === question.id) return;
-                  const next = reorderList(orderedQuestions, draggingQuestionId, question.id);
-                  reorderQuestions.mutate(next.map((item: any) => item.id), {
+                  if (!draggingQuestionId || reorderQuestions.isPending) return;
+                  const next = orderedQuestions;
+                  const previousOrder = [...questionOrderBeforeDrag];
+                  const nextIds = next.map((item: any) => item.id);
+                  const changed =
+                    previousOrder.length === nextIds.length &&
+                    previousOrder.some((id, index) => id !== nextIds[index]);
+
+                  setDragOverQuestionId('');
+                  setDraggingQuestionId('');
+                  setQuestionOrderBeforeDrag([]);
+
+                  if (!changed) return;
+
+                  reorderQuestions.mutate(nextIds, {
+                    onSuccess: () => {
+                      toast.success('Ordem das perguntas salva.');
+                    },
                     onError: (error: any) => {
-                      window.alert(error?.response?.data?.message ?? 'Erro ao reordenar perguntas.');
+                      if (previousOrder.length) {
+                        setOrderedQuestions((prev) => {
+                          const byId = new Map(prev.map((item: any) => [item.id, item]));
+                          return previousOrder
+                            .map((id) => byId.get(id))
+                            .filter(Boolean) as any[];
+                        });
+                      }
+                      toast.error(error?.response?.data?.message ?? 'Erro ao reordenar perguntas.');
                     },
                   });
-                  setDraggingQuestionId('');
                 }}
-                style={{ border: '1px solid var(--primary-soft)', borderRadius: 10, padding: 10, cursor: 'grab' }}
+                onDragEnd={() => {
+                  setDraggingQuestionId('');
+                  setDragOverQuestionId('');
+                  setQuestionOrderBeforeDrag([]);
+                }}
+                style={{
+                  border: '1px solid var(--primary-soft)',
+                  borderRadius: 10,
+                  padding: 10,
+                  cursor: 'grab',
+                  background: dragOverQuestionId === question.id ? 'var(--primary-soft)' : undefined,
+                  boxShadow:
+                    dragOverQuestionId === question.id ? 'inset 0 0 0 1px var(--primary)' : undefined,
+                }}
               >
                 <strong>
                   {index + 1}. {question.statement}
@@ -264,7 +324,7 @@ export function QuizDetailsPage() {
                       if (!window.confirm('Deseja excluir esta pergunta?')) return;
                       deleteQuestion.mutate(question.id, {
                         onError: (error: any) => {
-                          window.alert(error?.response?.data?.message ?? 'Erro ao excluir pergunta.');
+                          toast.error(error?.response?.data?.message ?? 'Erro ao excluir pergunta.');
                         },
                       });
                     }}
@@ -283,50 +343,44 @@ export function QuizDetailsPage() {
         open={questionModalOpen}
         onClose={() => setQuestionModalOpen(false)}
       >
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Enunciado
-            <textarea value={questionStatement} onChange={(e) => setQuestionStatement(e.target.value)} />
-          </label>
-          <label>
-            Resposta A
-            <input value={optionA} onChange={(e) => setOptionA(e.target.value)} />
-          </label>
-          <label>
-            Resposta B
-            <input value={optionB} onChange={(e) => setOptionB(e.target.value)} />
-          </label>
-          <label>
-            Resposta C
-            <input value={optionC} onChange={(e) => setOptionC(e.target.value)} />
-          </label>
-          <label>
-            Resposta D
-            <input value={optionD} onChange={(e) => setOptionD(e.target.value)} />
-          </label>
-          <label>
-            Resposta correta
-            <select value={correctOption} onChange={(e) => setCorrectOption(e.target.value as OptionKey)}>
+        <div className="grid gap-4">
+          <FormField id="question-statement" label="Enunciado">
+            <Textarea id="question-statement" value={questionStatement} onChange={(e) => setQuestionStatement(e.target.value)} />
+          </FormField>
+          <FormField id="question-option-a" label="Resposta A">
+            <Input id="question-option-a" value={optionA} onChange={(e) => setOptionA(e.target.value)} />
+          </FormField>
+          <FormField id="question-option-b" label="Resposta B">
+            <Input id="question-option-b" value={optionB} onChange={(e) => setOptionB(e.target.value)} />
+          </FormField>
+          <FormField id="question-option-c" label="Resposta C">
+            <Input id="question-option-c" value={optionC} onChange={(e) => setOptionC(e.target.value)} />
+          </FormField>
+          <FormField id="question-option-d" label="Resposta D">
+            <Input id="question-option-d" value={optionD} onChange={(e) => setOptionD(e.target.value)} />
+          </FormField>
+          <FormField id="question-correct-option" label="Resposta correta">
+            <Select id="question-correct-option" value={correctOption} onChange={(e) => setCorrectOption(e.target.value as OptionKey)}>
               <option value="A">A</option>
               <option value="B">B</option>
               <option value="C">C</option>
               <option value="D">D</option>
-            </select>
-          </label>
+            </Select>
+          </FormField>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Button
               loading={createQuestion.isPending || updateQuestion.isPending}
               disabled={createQuestion.isPending || updateQuestion.isPending}
               onClick={() => {
                 if (!questionStatement.trim() || !optionA.trim() || !optionB.trim() || !optionC.trim() || !optionD.trim()) {
-                  window.alert('Preencha enunciado e todas as respostas.');
+                  toast.error('Preencha enunciado e todas as respostas.');
                   return;
                 }
                 if (editingQuestionId) {
                   updateQuestion.mutate(undefined, {
                     onSuccess: () => setQuestionModalOpen(false),
                     onError: (error: any) => {
-                      window.alert(error?.response?.data?.message ?? 'Erro ao atualizar pergunta.');
+                      toast.error(error?.response?.data?.message ?? 'Erro ao atualizar pergunta.');
                     },
                   });
                   return;
@@ -334,7 +388,7 @@ export function QuizDetailsPage() {
                 createQuestion.mutate(undefined, {
                   onSuccess: () => setQuestionModalOpen(false),
                   onError: (error: any) => {
-                    window.alert(error?.response?.data?.message ?? 'Erro ao cadastrar pergunta.');
+                    toast.error(error?.response?.data?.message ?? 'Erro ao cadastrar pergunta.');
                   },
                 });
               }}

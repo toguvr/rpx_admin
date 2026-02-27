@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Edit3, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
-import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
+import { FormField } from '@/components/shared/FormField';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { SectionCard } from '@/components/shared/SectionCard';
+import { EmptyState, ErrorState, LoadingState } from '@/components/shared/States';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/services/api';
 
 type ModalType = 'none' | 'create-course' | 'edit-course';
@@ -13,15 +20,24 @@ type ModalType = 'none' | 'create-course' | 'edit-course';
 export function CoursesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ['courses'],
     queryFn: async () => (await api.get('/courses')).data,
   });
 
+  const [search, setSearch] = useState('');
   const [modalType, setModalType] = useState<ModalType>('none');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [courseTitle, setCourseTitle] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
+
+  const filteredData = useMemo(
+    () =>
+      (data ?? []).filter((course: any) =>
+        `${course.title ?? ''} ${course.description ?? ''}`.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [data, search],
+  );
 
   function closeModal() {
     setModalType('none');
@@ -43,17 +59,19 @@ export function CoursesPage() {
 
   const createCourse = useMutation({
     mutationFn: async () => api.post('/courses', { title: courseTitle, description: courseDescription }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['courses'] });
       closeModal();
-      qc.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Curso criado com sucesso.');
     },
   });
 
   const updateCourse = useMutation({
     mutationFn: async () => api.put(`/courses/${selectedCourseId}`, { title: courseTitle, description: courseDescription }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['courses'] });
       closeModal();
-      qc.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Curso atualizado com sucesso.');
     },
   });
 
@@ -61,35 +79,59 @@ export function CoursesPage() {
     mutationFn: async (courseId: string) => api.delete(`/courses/${courseId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Curso excluído com sucesso.');
     },
   });
 
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <h1 style={{ margin: 0 }}>Cursos</h1>
-        <Button onClick={openCreateModal}>Adicionar curso</Button>
-      </div>
+  const isSavingCourse = modalType !== 'none' && (createCourse.isPending || updateCourse.isPending);
 
-      <Card>
-        <h2>Lista</h2>
-        {isLoading && <p>Carregando cursos...</p>}
-        {!isLoading && !data?.length && <p>Nenhum curso cadastrado.</p>}
-        <div style={{ display: 'grid', gap: 10 }}>
-          {data?.map((course: any) => (
-            <div key={course.id} style={{ border: '1px solid var(--primary-soft)', borderRadius: 12, padding: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <div>
-                  <strong>{course.title}</strong>
-                  <p style={{ margin: '6px 0', color: 'var(--gray-1)' }}>{course.description}</p>
-                  <small>
-                    {(course.lessons ?? []).length} aulas | {(course.quizzes ?? []).length} quizzes
-                  </small>
+  return (
+    <div className="grid gap-6">
+      <PageHeader
+        title="Cursos"
+        description="Gerencie os cursos e acompanhe o conteúdo publicado."
+        actions={
+          <Button onClick={openCreateModal}>
+            <Plus size={16} />
+            Adicionar curso
+          </Button>
+        }
+      />
+
+      <SectionCard title="Lista de cursos" description="Busca rápida por título e descrição.">
+        {isFetching && !isLoading ? (
+          <div className="mb-3 inline-flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            <Loader2 size={14} className="animate-spin" />
+            Atualizando lista de cursos...
+          </div>
+        ) : null}
+
+        <div className="mb-4 max-w-sm">
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar curso..." />
+        </div>
+
+        {isLoading ? <LoadingState rows={4} /> : null}
+        {isError ? <ErrorState message="Erro ao carregar cursos." onRetry={() => refetch()} /> : null}
+        {!isLoading && !isError && !filteredData.length ? (
+          <EmptyState title="Nenhum curso encontrado" description="Cadastre um novo curso para começar." />
+        ) : null}
+
+        <div className="grid gap-3">
+          {filteredData.map((course: any) => (
+            <div key={course.id} className="rounded-lg border bg-card/60 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <strong className="text-base">{course.title}</strong>
+                  <p className="text-sm text-muted-foreground">{course.description}</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{(course.lessons ?? []).length} aulas</Badge>
+                    <Badge variant="outline">{(course.quizzes ?? []).length} quizzes</Badge>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div className="flex gap-2">
                   <Button onClick={() => navigate(`/courses/${course.id}`)}>Abrir curso</Button>
                   <Button variant="secondary" aria-label="Editar curso" title="Editar curso" onClick={() => openEditModal(course)}>
-                    <Icon name="edit" />
+                    <Edit3 size={16} />
                   </Button>
                   <Button
                     variant="destructive"
@@ -103,42 +145,42 @@ export function CoursesPage() {
                       }
                       deleteCourse.mutate(course.id, {
                         onError: (error: any) => {
-                          window.alert(error?.response?.data?.message ?? 'Erro ao excluir curso.');
+                          toast.error(error?.response?.data?.message ?? 'Erro ao excluir curso.');
                         },
                       });
                     }}
                   >
-                    <Icon name="trash" />
+                    <Trash2 size={16} />
                   </Button>
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </Card>
+      </SectionCard>
 
       <Modal title={modalType === 'edit-course' ? 'Editar curso' : 'Adicionar curso'} open={modalType !== 'none'} onClose={closeModal}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Título do curso
-            <input placeholder="Ex: Formação Inicial" value={courseTitle} onChange={(e) => setCourseTitle(e.target.value)} />
-          </label>
-          <label>
-            Descrição
-            <textarea placeholder="Descreva o objetivo do curso" value={courseDescription} onChange={(e) => setCourseDescription(e.target.value)} />
-          </label>
+        <div className="grid gap-4">
+          <FormField id="course-title" label="Título do curso">
+            <Input id="course-title" placeholder="Ex: Formação Inicial" value={courseTitle} onChange={(e) => setCourseTitle(e.target.value)} />
+          </FormField>
+
+          <FormField id="course-description" label="Descrição">
+            <Textarea id="course-description" placeholder="Descreva o objetivo do curso" value={courseDescription} onChange={(e) => setCourseDescription(e.target.value)} />
+          </FormField>
+
           <Button
-            loading={createCourse.isPending || updateCourse.isPending}
-            disabled={createCourse.isPending || updateCourse.isPending}
+            loading={isSavingCourse}
+            disabled={isSavingCourse}
             onClick={() => {
               if (!courseTitle.trim() || !courseDescription.trim()) {
-                window.alert('Preencha título e descrição.');
+                toast.error('Preencha título e descrição.');
                 return;
               }
               if (modalType === 'edit-course') {
                 updateCourse.mutate(undefined, {
                   onError: (error: any) => {
-                    window.alert(error?.response?.data?.message ?? 'Erro ao atualizar curso.');
+                    toast.error(error?.response?.data?.message ?? 'Erro ao atualizar curso.');
                   },
                 });
                 return;
@@ -146,12 +188,12 @@ export function CoursesPage() {
 
               createCourse.mutate(undefined, {
                 onError: (error: any) => {
-                  window.alert(error?.response?.data?.message ?? 'Erro ao criar curso.');
+                  toast.error(error?.response?.data?.message ?? 'Erro ao criar curso.');
                 },
               });
             }}
           >
-            {modalType === 'edit-course' ? 'Salvar alteracoes' : 'Salvar curso'}
+            {modalType === 'edit-course' ? 'Salvar alterações' : 'Salvar curso'}
           </Button>
         </div>
       </Modal>

@@ -1,16 +1,12 @@
 import type { CSSProperties, PropsWithChildren } from 'react';
 
-export function Card({ children, style }: PropsWithChildren<{ style?: CSSProperties }>) {
+import { cn } from '@/lib/utils';
+
+export function Card({ children, style, className }: PropsWithChildren<{ style?: CSSProperties; className?: string }>) {
   return (
     <div
-      style={{
-        background: 'var(--card)',
-        borderRadius: 10,
-        padding: 16,
-        border: '1px solid var(--border)',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-        ...style,
-      }}
+      className={cn('rounded-xl border bg-card p-5 text-card-foreground shadow-sm', className)}
+      style={style}
     >
       {children}
     </div>

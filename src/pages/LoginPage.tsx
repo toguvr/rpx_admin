@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import logo from '@/assets/rpx.svg';
+import logo from '@/assets/rpx-logo.png';
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
+import { FormField } from '@/components/shared/FormField';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { api } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { roleAccessMap, type Role } from '@/types/roles';
@@ -34,43 +36,47 @@ export function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 16 }}>
-      <div style={{ maxWidth: 480, width: '100%' }}>
-        <img
-          src={logo}
-          alt="RPX"
-          style={{ width: '100%', maxWidth: 260, display: 'block', margin: '0 auto 12px' }}
-        />
-        <Card style={{ width: '100%' }}>
-          <h1>Entrar</h1>
-          <p>Use suas credenciais para acessar o painel administrativo.</p>
-          <div style={{ display: 'grid', gap: 12 }}>
-            <label>
-              E-mail
-              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@rpx.com" />
-            </label>
-            <label>
-              Senha
-              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Digite sua senha" />
-            </label>
-            {error && <p style={{ color: 'var(--error)', margin: 0 }}>{error}</p>}
-            <Button onClick={handleLogin} loading={loggingIn} disabled={loggingIn}>
-              Entrar
-            </Button>
-            {privacyPolicyUrl && (
-              <p style={{ margin: 0, textAlign: 'center' }}>
-                <a
-                  href={privacyPolicyUrl}
-                  target={isExternalPrivacyUrl ? '_blank' : undefined}
-                  rel={isExternalPrivacyUrl ? 'noreferrer' : undefined}
-                >
-                  Política de privacidade
-                </a>
-              </p>
-            )}
-          </div>
-        </Card>
-      </div>
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <Card className="w-full max-w-md border bg-card/95 p-6 shadow-lg">
+        <div className="mb-4 space-y-2 text-center">
+          <img src={logo} alt="RPX" className="mx-auto w-full max-w-[240px] mb-8" />
+          <h1 className="text-2xl font-semibold">Entrar</h1>
+          <p className="text-sm text-muted-foreground">Use suas credenciais para acessar o painel administrativo.</p>
+        </div>
+
+        <div className="space-y-4">
+          <FormField id="email" label="E-mail">
+            <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@rpx.com" />
+          </FormField>
+          <FormField id="password" label="Senha">
+            <Input
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              placeholder="Digite sua senha"
+            />
+          </FormField>
+
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+          <Button onClick={handleLogin} loading={loggingIn} disabled={loggingIn} className="w-full">
+            Entrar
+          </Button>
+
+          {privacyPolicyUrl ? (
+            <p className="text-center text-sm">
+              <a
+                href={privacyPolicyUrl}
+                target={isExternalPrivacyUrl ? '_blank' : undefined}
+                rel={isExternalPrivacyUrl ? 'noreferrer' : undefined}
+              >
+                Política de privacidade
+              </a>
+            </p>
+          ) : null}
+        </div>
+      </Card>
     </div>
   );
 }

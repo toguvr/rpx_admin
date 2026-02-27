@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
-import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
+import { FormField } from '@/components/shared/FormField';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { SectionCard } from '@/components/shared/SectionCard';
+import { EmptyState, ErrorState, LoadingState } from '@/components/shared/States';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { api } from '@/services/api';
 
 export function PsychologistsPage() {
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['psychologists'],
     queryFn: async () => (await api.get('/users/psychologists')).data,
   });
@@ -28,80 +34,93 @@ export function PsychologistsPage() {
       setPassword('');
       setModalOpen(false);
       qc.invalidateQueries({ queryKey: ['psychologists'] });
+      toast.success('Psicólogo adicionado com sucesso.');
     },
   });
 
   const remove = useMutation({
     mutationFn: async (id: string) => api.delete(`/users/psychologists/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['psychologists'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['psychologists'] });
+      toast.success('Psicólogo excluído com sucesso.');
+    },
   });
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <h1 style={{ margin: 0 }}>Psicólogos</h1>
-        <Button onClick={() => setModalOpen(true)}>Adicionar psicólogo</Button>
-      </div>
+    <div className="grid gap-6">
+      <PageHeader
+        title="Psicólogos"
+        description="Gerencie o time de atendimento psicológico."
+        actions={
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus size={16} />
+            Adicionar psicólogo
+          </Button>
+        }
+      />
 
-      <Card>
-        <h2>Lista</h2>
-        {data?.map((psychologist: any) => (
-          <div
-            key={psychologist.id}
-            style={{
-              border: '1px solid var(--primary-soft)',
-              borderRadius: 12,
-              padding: 12,
-              marginBottom: 8,
-            }}
-          >
-            <strong>{psychologist.name}</strong>
-            <p>{psychologist.email}</p>
-            <Button
-              variant="destructive"
-              aria-label="Excluir psicólogo"
-              title="Excluir psicólogo"
-              onClick={() => {
-                if (!window.confirm('Deseja excluir este psicólogo?')) return;
-                setRemovingId(psychologist.id);
-                remove.mutate(psychologist.id, {
-                  onSettled: () => setRemovingId(''),
-                });
-              }}
-              loading={remove.isPending && removingId === psychologist.id}
-              disabled={remove.isPending}
-            >
-              <Icon name="trash" />
-            </Button>
-          </div>
-        ))}
-      </Card>
+      <SectionCard title="Lista" description="Profissionais vinculados ao suporte.">
+        {isLoading ? <LoadingState rows={4} /> : null}
+        {isError ? <ErrorState message="Erro ao carregar psicólogos." onRetry={() => refetch()} /> : null}
+        {!isLoading && !isError && !data?.length ? (
+          <EmptyState title="Nenhum psicólogo cadastrado" description="Adicione um psicólogo para habilitar atendimentos." />
+        ) : null}
+
+        <div className="grid gap-3">
+          {data?.map((psychologist: any) => (
+            <div key={psychologist.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-4">
+              <div>
+                <p className="font-semibold">{psychologist.name}</p>
+                <p className="text-sm text-muted-foreground">{psychologist.email}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge>Psicólogo</Badge>
+                <Button
+                  variant="destructive"
+                  aria-label="Excluir psicólogo"
+                  title="Excluir psicólogo"
+                  onClick={() => {
+                    if (!window.confirm('Deseja excluir este psicólogo?')) return;
+                    setRemovingId(psychologist.id);
+                    remove.mutate(psychologist.id, {
+                      onSettled: () => setRemovingId(''),
+                      onError: () => toast.error('Erro ao excluir psicólogo.'),
+                    });
+                  }}
+                  loading={remove.isPending && removingId === psychologist.id}
+                  disabled={remove.isPending}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
 
       <Modal title="Adicionar psicólogo" open={modalOpen} onClose={() => setModalOpen(false)}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Nome
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" />
-          </label>
-          <label>
-            E-mail
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="psicologo@rpx.com" />
-          </label>
-          <label>
-            Senha
-            <input
+        <div className="grid gap-4">
+          <FormField id="psychologist-name" label="Nome">
+            <Input id="psychologist-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" />
+          </FormField>
+          <FormField id="psychologist-email" label="E-mail">
+            <Input id="psychologist-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="psicologo@rpx.com" />
+          </FormField>
+          <FormField id="psychologist-password" label="Senha">
+            <Input
+              id="psychologist-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Senha inicial"
             />
-          </label>
+          </FormField>
           <Button
             loading={create.isPending}
             disabled={create.isPending}
             onClick={() => {
               if (!name.trim() || !email.trim() || !password.trim()) {
-                window.alert('Preencha nome, e-mail e senha.');
+                toast.error('Preencha nome, e-mail e senha.');
                 return;
               }
               create.mutate();

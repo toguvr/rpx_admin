@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
+import { FormField } from '@/components/shared/FormField';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/services/api';
 
 type EditModalType = 'none' | 'quiz' | 'lesson';
@@ -28,7 +32,13 @@ export function CourseDetailsPage() {
   const [lessonVideoFile, setLessonVideoFile] = useState<File | null>(null);
   const [lessonDurationSeconds, setLessonDurationSeconds] = useState<number | ''>('');
   const [draggingQuizId, setDraggingQuizId] = useState('');
+  const [dragOverQuizId, setDragOverQuizId] = useState('');
+  const [quizOrderBeforeDrag, setQuizOrderBeforeDrag] = useState<string[]>([]);
   const [draggingLessonId, setDraggingLessonId] = useState('');
+  const [dragOverLessonId, setDragOverLessonId] = useState('');
+  const [lessonOrderBeforeDrag, setLessonOrderBeforeDrag] = useState<string[]>([]);
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
 
   const [editModalType, setEditModalType] = useState<EditModalType>('none');
   const [editingQuizId, setEditingQuizId] = useState('');
@@ -41,6 +51,18 @@ export function CourseDetailsPage() {
 
   const [createQuizModalOpen, setCreateQuizModalOpen] = useState(false);
   const [createLessonModalOpen, setCreateLessonModalOpen] = useState(false);
+  const canCreateQuiz = Boolean(courseId) && maxAttempts >= 1;
+
+  useEffect(() => {
+    if (!course) {
+      setLessons([]);
+      setQuizzes([]);
+      return;
+    }
+
+    setLessons([...(course.lessons ?? [])].sort((a: any, b: any) => a.order - b.order));
+    setQuizzes([...(course.quizzes ?? [])].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0)));
+  }, [course]);
 
   function closeEditModal() {
     setEditModalType('none');
@@ -92,7 +114,7 @@ export function CourseDetailsPage() {
     mutationFn: async () => api.post('/quizzes', { courseId, maxAttempts }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['courses'] });
-      window.alert('Quiz cadastrado com sucesso.');
+      toast.success('Quiz cadastrado com sucesso.');
     },
   });
 
@@ -101,7 +123,7 @@ export function CourseDetailsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['courses'] });
       closeEditModal();
-      window.alert('Quiz atualizado com sucesso.');
+      toast.success('Quiz atualizado com sucesso.');
     },
   });
 
@@ -109,7 +131,7 @@ export function CourseDetailsPage() {
     mutationFn: async (quizId: string) => api.delete(`/quizzes/${quizId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['courses'] });
-      window.alert('Quiz excluido com sucesso.');
+      toast.success('Quiz excluido com sucesso.');
     },
   });
 
@@ -136,7 +158,7 @@ export function CourseDetailsPage() {
       setLessonVideoFile(null);
       setLessonDurationSeconds('');
       qc.invalidateQueries({ queryKey: ['courses'] });
-      window.alert('Aula cadastrada com sucesso.');
+      toast.success('Aula cadastrada com sucesso.');
     },
   });
 
@@ -161,7 +183,7 @@ export function CourseDetailsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['courses'] });
       closeEditModal();
-      window.alert('Aula atualizada com sucesso.');
+      toast.success('Aula atualizada com sucesso.');
     },
   });
 
@@ -169,24 +191,18 @@ export function CourseDetailsPage() {
     mutationFn: async (lessonId: string) => api.delete(`/courses/lessons/${lessonId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['courses'] });
-      window.alert('Aula excluida com sucesso.');
+      toast.success('Aula excluida com sucesso.');
     },
   });
 
   const reorderLessons = useMutation({
     mutationFn: async (lessonIds: string[]) =>
       api.patch(`/courses/${courseId}/lessons/reorder`, { lessonIds }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['courses'] });
-    },
   });
 
   const reorderQuizzes = useMutation({
     mutationFn: async (quizIds: string[]) =>
       api.patch('/quizzes/reorder', { courseId, quizIds }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['courses'] });
-    },
   });
 
   if (isLoading) {
@@ -206,9 +222,6 @@ export function CourseDetailsPage() {
       </div>
     );
   }
-
-  const lessons = [...(course.lessons ?? [])].sort((a: any, b: any) => a.order - b.order);
-  const quizzes = [...(course.quizzes ?? [])].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
   function reorderList<T extends { id: string }>(items: T[], fromId: string, toId: string) {
     const from = items.findIndex((item) => item.id === fromId);
@@ -241,26 +254,10 @@ export function CourseDetailsPage() {
       <Card style={{ display: 'grid', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <h2 style={{ margin: 0 }}>Quizzes cadastrados</h2>
-          <button
-            type="button"
-            aria-label="Adicionar quiz"
-            title="Adicionar quiz"
-            onClick={() => setCreateQuizModalOpen(true)}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 999,
-              border: 'none',
-              background: 'var(--primary)',
-              color: 'var(--on-primary)',
-              fontSize: 22,
-              fontWeight: 700,
-              cursor: 'pointer',
-              lineHeight: 1,
-            }}
-          >
+          <Button onClick={() => setCreateQuizModalOpen(true)}>
             <Icon name="plus" size={18} />
-          </button>
+            Cadastrar quiz
+          </Button>
         </div>
         {!quizzes.length && <p>Nenhum quiz cadastrado para este curso.</p>}
         {!!quizzes.length && (
@@ -278,19 +275,65 @@ export function CourseDetailsPage() {
                   <tr
                     key={quiz.id}
                     draggable
-                    onDragStart={() => setDraggingQuizId(quiz.id)}
-                    onDragOver={(event) => event.preventDefault()}
+                    onDragStart={() => {
+                      setDraggingQuizId(quiz.id);
+                      setQuizOrderBeforeDrag(quizzes.map((item: any) => item.id));
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (!draggingQuizId || draggingQuizId === quiz.id || reorderQuizzes.isPending) return;
+                      setDragOverQuizId(quiz.id);
+                      setQuizzes((prev) => reorderList(prev, draggingQuizId, quiz.id));
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverQuizId === quiz.id) {
+                        setDragOverQuizId('');
+                      }
+                    }}
                     onDrop={() => {
-                      if (!draggingQuizId || draggingQuizId === quiz.id) return;
-                      const next = reorderList(quizzes, draggingQuizId, quiz.id);
-                      reorderQuizzes.mutate(next.map((item: any) => item.id), {
+                      if (!draggingQuizId || reorderQuizzes.isPending) return;
+                      const next = quizzes;
+                      const previousOrder = [...quizOrderBeforeDrag];
+                      const nextIds = next.map((item: any) => item.id);
+                      const changed =
+                        previousOrder.length === nextIds.length &&
+                        previousOrder.some((id, index) => id !== nextIds[index]);
+
+                      setDragOverQuizId('');
+                      setDraggingQuizId('');
+                      setQuizOrderBeforeDrag([]);
+
+                      if (!changed) return;
+
+                      reorderQuizzes.mutate(nextIds, {
+                        onSuccess: () => {
+                          toast.success('Ordem dos quizzes salva.');
+                        },
                         onError: (error: any) => {
-                          window.alert(error?.response?.data?.message ?? 'Erro ao reordenar quizzes.');
+                          if (previousOrder.length) {
+                            setQuizzes((prev) => {
+                              const byId = new Map(prev.map((item: any) => [item.id, item]));
+                              return previousOrder
+                                .map((id) => byId.get(id))
+                                .filter(Boolean) as any[];
+                            });
+                          }
+                          toast.error(error?.response?.data?.message ?? 'Erro ao reordenar quizzes.');
                         },
                       });
-                      setDraggingQuizId('');
                     }}
-                    style={{ borderTop: '1px solid var(--primary-soft)', cursor: 'grab' }}
+                    onDragEnd={() => {
+                      setDraggingQuizId('');
+                      setDragOverQuizId('');
+                      setQuizOrderBeforeDrag([]);
+                    }}
+                    style={{
+                      borderTop: '1px solid var(--primary-soft)',
+                      cursor: 'grab',
+                      background: dragOverQuizId === quiz.id ? 'var(--primary-soft)' : undefined,
+                      boxShadow:
+                        dragOverQuizId === quiz.id ? 'inset 0 0 0 1px var(--primary)' : undefined,
+                    }}
                   >
                     <td style={{ padding: '8px 0' }}>
                       <button
@@ -338,7 +381,7 @@ export function CourseDetailsPage() {
                             }
                             deleteQuiz.mutate(quiz.id, {
                               onError: (error: any) => {
-                                window.alert(error?.response?.data?.message ?? 'Erro ao excluir quiz.');
+                                toast.error(error?.response?.data?.message ?? 'Erro ao excluir quiz.');
                               },
                             });
                           }}
@@ -358,26 +401,10 @@ export function CourseDetailsPage() {
       <Card style={{ display: 'grid', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <h2 style={{ margin: 0 }}>Aulas cadastradas</h2>
-          <button
-            type="button"
-            aria-label="Adicionar aula"
-            title="Adicionar aula"
-            onClick={() => setCreateLessonModalOpen(true)}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 999,
-              border: 'none',
-              background: 'var(--primary)',
-              color: 'var(--on-primary)',
-              fontSize: 22,
-              fontWeight: 700,
-              cursor: 'pointer',
-              lineHeight: 1,
-            }}
-          >
+          <Button onClick={() => setCreateLessonModalOpen(true)}>
             <Icon name="plus" size={18} />
-          </button>
+            Cadastrar aula
+          </Button>
         </div>
         {!lessons.length && <p>Nenhuma aula cadastrada para este curso.</p>}
         {!!lessons.length && (
@@ -386,7 +413,6 @@ export function CourseDetailsPage() {
               <thead>
                 <tr>
                   <th align="left">Titulo</th>
-                  <th align="left">Ordem</th>
                   <th align="left">Duracao</th>
                   <th align="left">Video</th>
                   <th align="left">Acoes</th>
@@ -397,22 +423,67 @@ export function CourseDetailsPage() {
                   <tr
                     key={lesson.id}
                     draggable
-                    onDragStart={() => setDraggingLessonId(lesson.id)}
-                    onDragOver={(event) => event.preventDefault()}
+                    onDragStart={() => {
+                      setDraggingLessonId(lesson.id);
+                      setLessonOrderBeforeDrag(lessons.map((item: any) => item.id));
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (!draggingLessonId || draggingLessonId === lesson.id || reorderLessons.isPending) return;
+                      setDragOverLessonId(lesson.id);
+                      setLessons((prev) => reorderList(prev, draggingLessonId, lesson.id));
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverLessonId === lesson.id) {
+                        setDragOverLessonId('');
+                      }
+                    }}
                     onDrop={() => {
-                      if (!draggingLessonId || draggingLessonId === lesson.id) return;
-                      const next = reorderList(lessons, draggingLessonId, lesson.id);
-                      reorderLessons.mutate(next.map((item: any) => item.id), {
+                      if (!draggingLessonId || reorderLessons.isPending) return;
+                      const next = lessons;
+                      const previousOrder = [...lessonOrderBeforeDrag];
+                      const nextIds = next.map((item: any) => item.id);
+                      const changed =
+                        previousOrder.length === nextIds.length &&
+                        previousOrder.some((id, index) => id !== nextIds[index]);
+
+                      setDragOverLessonId('');
+                      setDraggingLessonId('');
+                      setLessonOrderBeforeDrag([]);
+
+                      if (!changed) return;
+
+                      reorderLessons.mutate(nextIds, {
+                        onSuccess: () => {
+                          toast.success('Ordem das aulas salva.');
+                        },
                         onError: (error: any) => {
-                          window.alert(error?.response?.data?.message ?? 'Erro ao reordenar aulas.');
+                          if (previousOrder.length) {
+                            setLessons((prev) => {
+                              const byId = new Map(prev.map((item: any) => [item.id, item]));
+                              return previousOrder
+                                .map((id) => byId.get(id))
+                                .filter(Boolean) as any[];
+                            });
+                          }
+                          toast.error(error?.response?.data?.message ?? 'Erro ao reordenar aulas.');
                         },
                       });
-                      setDraggingLessonId('');
                     }}
-                    style={{ borderTop: '1px solid var(--primary-soft)', cursor: 'grab' }}
+                    onDragEnd={() => {
+                      setDraggingLessonId('');
+                      setDragOverLessonId('');
+                      setLessonOrderBeforeDrag([]);
+                    }}
+                    style={{
+                      borderTop: '1px solid var(--primary-soft)',
+                      cursor: 'grab',
+                      background: dragOverLessonId === lesson.id ? 'var(--primary-soft)' : undefined,
+                      boxShadow:
+                        dragOverLessonId === lesson.id ? 'inset 0 0 0 1px var(--primary)' : undefined,
+                    }}
                   >
                     <td style={{ padding: '8px 0' }}>{lesson.title}</td>
-                    <td>{lesson.order}</td>
                     <td>{lesson.durationSeconds ? `${lesson.durationSeconds}s` : '-'}</td>
                     <td>{lesson.videoOriginalName ?? lesson.videoKey ?? 'Video enviado'}</td>
                     <td style={{ padding: '8px 0' }}>
@@ -444,7 +515,7 @@ export function CourseDetailsPage() {
                             }
                             deleteLesson.mutate(lesson.id, {
                               onError: (error: any) => {
-                                window.alert(error?.response?.data?.message ?? 'Erro ao excluir aula.');
+                                toast.error(error?.response?.data?.message ?? 'Erro ao excluir aula.');
                               },
                             });
                           }}
@@ -462,33 +533,28 @@ export function CourseDetailsPage() {
       </Card>
 
       <Modal title="Cadastrar quiz" open={createQuizModalOpen} onClose={() => setCreateQuizModalOpen(false)}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Maximo de tentativas
-            <input
+        <div className="grid gap-4">
+          <FormField id="create-quiz-max-attempts" label="Maximo de tentativas">
+            <Input
+              id="create-quiz-max-attempts"
               type="number"
               min={1}
               value={maxAttempts}
               onChange={(e) => setMaxAttempts(Number(e.target.value) || 1)}
             />
-          </label>
+          </FormField>
           <Button
             loading={createQuiz.isPending}
-            disabled={createQuiz.isPending}
+            disabled={createQuiz.isPending || !canCreateQuiz}
             onClick={() => {
-              if (!courseId) {
-                window.alert('Curso invalido.');
-                return;
-              }
-              if (maxAttempts < 1) {
-                window.alert('Informe um numero de tentativas valido.');
-                return;
-              }
               createQuiz.mutate(undefined, {
-                onError: (error: any) => {
-                  window.alert(error?.response?.data?.message ?? 'Erro ao cadastrar quiz.');
-                },
                 onSuccess: () => setCreateQuizModalOpen(false),
+                onError: (error: any) => {
+                  const message =
+                    error?.response?.data?.message ??
+                    'Nao foi possivel cadastrar quiz. Este curso aceita apenas um quiz base (antes e depois).';
+                  toast.error(message);
+                },
               });
             }}
           >
@@ -498,52 +564,52 @@ export function CourseDetailsPage() {
       </Modal>
 
       <Modal title="Cadastrar aula" open={createLessonModalOpen} onClose={() => setCreateLessonModalOpen(false)}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Titulo da aula
-            <input
+        <div className="grid gap-4">
+          <FormField id="lesson-title" label="Titulo da aula">
+            <Input
+              id="lesson-title"
               placeholder="Ex: Assistindo aulas em video"
               value={lessonTitle}
               onChange={(e) => setLessonTitle(e.target.value)}
             />
-          </label>
-          <label>
-            Descricao
-            <textarea
+          </FormField>
+          <FormField id="lesson-description" label="Descricao">
+            <Textarea
+              id="lesson-description"
               placeholder="Descreva o conteudo da aula"
               value={lessonDescription}
               onChange={(e) => setLessonDescription(e.target.value)}
             />
-          </label>
-          <label>
-            Arquivo de video
-            <input
+          </FormField>
+          <FormField id="lesson-video-file" label="Arquivo de video">
+            <Input
+              id="lesson-video-file"
               type="file"
               accept="video/*"
               onChange={(e) => setLessonVideoFile(e.target.files?.[0] ?? null)}
             />
-          </label>
-          <label>
-            Duracao em segundos (opcional)
-            <input
+          </FormField>
+          <FormField id="lesson-duration" label="Duracao em segundos (opcional)">
+            <Input
+              id="lesson-duration"
               type="number"
               min={0}
               placeholder="Ex: 600"
               value={lessonDurationSeconds}
               onChange={(e) => setLessonDurationSeconds(e.target.value ? Number(e.target.value) : '')}
             />
-          </label>
+          </FormField>
           <Button
             loading={createLesson.isPending}
             disabled={createLesson.isPending}
             onClick={() => {
               if (!lessonTitle.trim() || !lessonDescription.trim() || !lessonVideoFile) {
-                window.alert('Preencha titulo, descricao e selecione o video.');
+                toast.error('Preencha titulo, descricao e selecione o video.');
                 return;
               }
               createLesson.mutate(undefined, {
                 onError: (error: any) => {
-                  window.alert(error?.message ?? 'Erro ao adicionar aula.');
+                  toast.error(error?.message ?? 'Erro ao adicionar aula.');
                 },
                 onSuccess: () => setCreateLessonModalOpen(false),
               });
@@ -555,31 +621,31 @@ export function CourseDetailsPage() {
       </Modal>
 
       <Modal title="Editar quiz" open={editModalType === 'quiz'} onClose={closeEditModal}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Maximo de tentativas
-            <input
+        <div className="grid gap-4">
+          <FormField id="edit-quiz-max-attempts" label="Maximo de tentativas">
+            <Input
+              id="edit-quiz-max-attempts"
               type="number"
               min={1}
               value={editingQuizMaxAttempts}
               onChange={(e) => setEditingQuizMaxAttempts(Number(e.target.value) || 1)}
             />
-          </label>
+          </FormField>
           <Button
             loading={updateQuiz.isPending}
             disabled={updateQuiz.isPending}
             onClick={() => {
               if (!editingQuizId) {
-                window.alert('Quiz invalido.');
+                toast.error('Quiz invalido.');
                 return;
               }
               if (editingQuizMaxAttempts < 1) {
-                window.alert('Informe um maximo de tentativas valido.');
+                toast.error('Informe um maximo de tentativas valido.');
                 return;
               }
               updateQuiz.mutate(undefined, {
                 onError: (error: any) => {
-                  window.alert(error?.response?.data?.message ?? 'Erro ao atualizar quiz.');
+                  toast.error(error?.response?.data?.message ?? 'Erro ao atualizar quiz.');
                 },
               });
             }}
@@ -590,24 +656,24 @@ export function CourseDetailsPage() {
       </Modal>
 
       <Modal title="Editar aula" open={editModalType === 'lesson'} onClose={closeEditModal}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Titulo da aula
-            <input
+        <div className="grid gap-4">
+          <FormField id="edit-lesson-title" label="Titulo da aula">
+            <Input
+              id="edit-lesson-title"
               value={editingLessonTitle}
               onChange={(e) => setEditingLessonTitle(e.target.value)}
             />
-          </label>
-          <label>
-            Descricao
-            <textarea
+          </FormField>
+          <FormField id="edit-lesson-description" label="Descricao">
+            <Textarea
+              id="edit-lesson-description"
               value={editingLessonDescription}
               onChange={(e) => setEditingLessonDescription(e.target.value)}
             />
-          </label>
-          <label>
-            Duracao em segundos (opcional)
-            <input
+          </FormField>
+          <FormField id="edit-lesson-duration" label="Duracao em segundos (opcional)">
+            <Input
+              id="edit-lesson-duration"
               type="number"
               min={0}
               value={editingLessonDurationSeconds}
@@ -615,30 +681,30 @@ export function CourseDetailsPage() {
                 setEditingLessonDurationSeconds(e.target.value ? Number(e.target.value) : '')
               }
             />
-          </label>
-          <label>
-            Substituir video (opcional)
-            <input
+          </FormField>
+          <FormField id="edit-lesson-video-file" label="Substituir video (opcional)">
+            <Input
+              id="edit-lesson-video-file"
               type="file"
               accept="video/*"
               onChange={(e) => setEditingLessonVideoFile(e.target.files?.[0] ?? null)}
             />
-          </label>
+          </FormField>
           <Button
             loading={updateLesson.isPending}
             disabled={updateLesson.isPending}
             onClick={() => {
               if (!editingLessonId) {
-                window.alert('Aula invalida.');
+                toast.error('Aula invalida.');
                 return;
               }
               if (!editingLessonTitle.trim() || !editingLessonDescription.trim()) {
-                window.alert('Preencha titulo e descricao.');
+                toast.error('Preencha titulo e descricao.');
                 return;
               }
               updateLesson.mutate(undefined, {
                 onError: (error: any) => {
-                  window.alert(error?.response?.data?.message ?? error?.message ?? 'Erro ao atualizar aula.');
+                  toast.error(error?.response?.data?.message ?? error?.message ?? 'Erro ao atualizar aula.');
                 },
               });
             }}

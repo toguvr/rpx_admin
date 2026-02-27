@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CheckCircle2, MessageCirclePlus } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
 import { Modal } from '@/components/Modal';
+import { FormField } from '@/components/shared/FormField';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { SectionCard } from '@/components/shared/SectionCard';
+import { EmptyState, ErrorState, LoadingState } from '@/components/shared/States';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 
@@ -14,16 +21,20 @@ export function ForumPage() {
   const [answerModalOpen, setAnswerModalOpen] = useState(false);
   const [answerQuestionId, setAnswerQuestionId] = useState('');
   const [answerBody, setAnswerBody] = useState('');
-  const [solvingId, setSolvingId] = useState('');
+  const [solvingAnswerId, setSolvingAnswerId] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'SOLVED'>('ALL');
 
-  const { data } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['forum'],
     queryFn: async () => (await api.get('/forum')).data,
   });
 
-  const solve = useMutation({
-    mutationFn: async (questionId: string) => api.patch(`/forum/${questionId}/solve`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['forum'] }),
+  const solveByAnswer = useMutation({
+    mutationFn: async (answerId: string) => api.patch(`/forum/answers/${answerId}/solve`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['forum'] });
+      toast.success('Resposta marcada como solução.');
+    },
   });
 
   const answerMutation = useMutation({
@@ -34,111 +45,135 @@ export function ForumPage() {
       setAnswerQuestionId('');
       setAnswerModalOpen(false);
       qc.invalidateQueries({ queryKey: ['forum'] });
+      toast.success('Resposta salva.');
     },
   });
 
+  const filteredQuestions = (data ?? []).filter((question: any) => {
+    if (statusFilter === 'ALL') return true;
+    return question.status === statusFilter;
+  });
+
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h1>Forum</h1>
-      {data?.map((q: any) => (
-        <Card key={q.id}>
-          <strong>{q.title}</strong>
-          <p>{q.body}</p>
-          <p>Status: {q.status === 'SOLVED' ? 'Solucionada' : 'Aberta'}</p>
+    <div className="grid gap-6">
+      <PageHeader
+        title="Fórum"
+        description="Acompanhe dúvidas dos alunos e respostas da equipe."
+      />
 
-          {Array.isArray(q.answers) && q.answers.length > 0 && (
-            <div style={{ display: 'grid', gap: 8, marginTop: 10, marginBottom: 12 }}>
-              <strong>Respostas</strong>
-              {q.answers.map((ans: any) => (
-                <div
-                  key={ans.id}
-                  style={{ border: '1px solid var(--primary-soft)', borderRadius: 10, padding: 10 }}
-                >
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <strong>{ans.user?.name ?? 'Usuario'}</strong>
-                    {ans.user?.role === 'PROFESSOR' && (
-                      <span
-                        style={{
-                          background: 'var(--primary-soft)',
-                          color: 'var(--primary-pressed)',
-                          borderRadius: 8,
-                          padding: '2px 8px',
-                          fontSize: 12,
-                          fontWeight: 700,
-                        }}
-                      >
-                        Professor
-                      </span>
-                    )}
-                    {ans.isAi && (
-                      <span
-                        style={{
-                          background: '#efe7ff',
-                          color: '#5a3fa6',
-                          borderRadius: 8,
-                          padding: '2px 8px',
-                          fontSize: 12,
-                          fontWeight: 700,
-                        }}
-                      >
-                        IA
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ marginBottom: 0 }}>{ans.body}</p>
+      <SectionCard title="Perguntas" description="Discussões abertas e solucionadas.">
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Button variant={statusFilter === 'ALL' ? 'default' : 'secondary'} size="sm" onClick={() => setStatusFilter('ALL')}>
+            Todas
+          </Button>
+          <Button variant={statusFilter === 'OPEN' ? 'default' : 'secondary'} size="sm" onClick={() => setStatusFilter('OPEN')}>
+            Não solucionadas
+          </Button>
+          <Button variant={statusFilter === 'SOLVED' ? 'default' : 'secondary'} size="sm" onClick={() => setStatusFilter('SOLVED')}>
+            Solucionadas
+          </Button>
+        </div>
+
+        {isLoading ? <LoadingState rows={4} /> : null}
+        {isError ? <ErrorState message="Erro ao carregar fórum." onRetry={() => refetch()} /> : null}
+        {!isLoading && !isError && !filteredQuestions.length ? (
+          <EmptyState
+            title="Nenhuma pergunta para este filtro"
+            description="Altere o filtro para visualizar outras discussões."
+          />
+        ) : null}
+
+        <div className="grid gap-3">
+          {filteredQuestions.map((q: any) => (
+            <div key={q.id} className="rounded-lg border bg-card/70 p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Badge variant={q.status === 'SOLVED' ? 'secondary' : 'outline'}>
+                  {q.status === 'SOLVED' ? 'Solucionada' : 'Aberta'}
+                </Badge>
+              </div>
+
+              <strong className="text-base">{q.title}</strong>
+              <p className="mt-1 text-sm text-muted-foreground">{q.body}</p>
+
+              {Array.isArray(q.answers) && q.answers.length > 0 ? (
+                <div className="mt-3 grid gap-2">
+                  <strong className="text-sm">Respostas</strong>
+                  {q.answers.map((ans: any) => (
+                    <div key={ans.id} className="rounded-md border bg-muted/30 p-3">
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        <strong className="text-sm">{ans.user?.name ?? 'Usuario'}</strong>
+                        {ans.user?.role === 'PROFESSOR' ? <Badge variant="outline">Professor</Badge> : null}
+                        {ans.isAi ? <Badge>IA</Badge> : null}
+                        {(q.solutionAnswerId === ans.id || q.solutionAnswer?.id === ans.id) ? (
+                          <Badge variant="secondary">Solução escolhida</Badge>
+                        ) : null}
+                      </div>
+                      <p className="text-sm">{ans.body}</p>
+                      {(role === 'PROFESSOR' || role === 'ADMIN') && (
+                        <div className="mt-2">
+                          <Button
+                            size="sm"
+                            variant={q.solutionAnswerId === ans.id || q.solutionAnswer?.id === ans.id ? 'secondary' : 'default'}
+                            loading={solveByAnswer.isPending && solvingAnswerId === ans.id}
+                            disabled={solveByAnswer.isPending}
+                            onClick={() => {
+                              setSolvingAnswerId(ans.id);
+                              solveByAnswer.mutate(ans.id, {
+                                onError: (error: any) => {
+                                  toast.error(error?.response?.data?.message ?? 'Erro ao marcar solução.');
+                                },
+                                onSettled: () => setSolvingAnswerId(''),
+                              });
+                            }}
+                          >
+                            <CheckCircle2 size={14} />
+                            {q.solutionAnswerId === ans.id || q.solutionAnswer?.id === ans.id
+                              ? 'Resposta marcada'
+                              : 'Marcar como solução'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : null}
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(role === 'PROFESSOR' || role === 'ADMIN') && q.status !== 'SOLVED' && !q.solutionAnswerId && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setAnswerQuestionId(q.id);
+                      setAnswerModalOpen(true);
+                    }}
+                  >
+                    <MessageCirclePlus size={16} />
+                    Adicionar resposta
+                  </Button>
+                )}
+              </div>
             </div>
-          )}
+          ))}
+        </div>
+      </SectionCard>
 
-          <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {(role === 'PROFESSOR' || role === 'ADMIN') && (
-              <Button
-                onClick={() => {
-                  setAnswerQuestionId(q.id);
-                  setAnswerModalOpen(true);
-                }}
-              >
-                Adicionar resposta
-              </Button>
-            )}
-            <Button
-              loading={solve.isPending && solvingId === q.id}
-              disabled={solve.isPending}
-              onClick={() => {
-                setSolvingId(q.id);
-                solve.mutate(q.id, {
-                  onSettled: () => setSolvingId(''),
-                });
-              }}
-            >
-              Marcar solucionada
-            </Button>
-          </div>
-        </Card>
-      ))}
-
-      <Modal
-        title="Adicionar resposta"
-        open={answerModalOpen}
-        onClose={() => setAnswerModalOpen(false)}
-      >
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Resposta
-            <textarea
+      <Modal title="Adicionar resposta" open={answerModalOpen} onClose={() => setAnswerModalOpen(false)}>
+        <div className="grid gap-4">
+          <FormField id="answer-body" label="Resposta">
+            <Textarea
+              id="answer-body"
               placeholder="Digite a resposta para a dúvida"
               value={answerBody}
               onChange={(e) => setAnswerBody(e.target.value)}
-              style={{ minHeight: 110 }}
+              className="min-h-[120px]"
             />
-          </label>
+          </FormField>
           <Button
             loading={answerMutation.isPending}
             disabled={answerMutation.isPending}
             onClick={() => {
               if (!answerBody.trim() || !answerQuestionId) {
-                window.alert('Escreva a resposta antes de salvar.');
+                toast.error('Escreva a resposta antes de salvar.');
                 return;
               }
               answerMutation.mutate({ questionId: answerQuestionId, body: answerBody.trim() });

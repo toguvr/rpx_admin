@@ -1,10 +1,18 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil, Plus, Upload, UserPlus, Users } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
-import { Icon } from '@/components/Icon';
 import { Modal } from '@/components/Modal';
+import { FormField } from '@/components/shared/FormField';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { SectionCard } from '@/components/shared/SectionCard';
+import { EmptyState } from '@/components/shared/States';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api } from '@/services/api';
 
 export function ImportsPage() {
@@ -52,6 +60,7 @@ export function ImportsPage() {
       setGroupId('');
       setModalOpen(false);
       qc.invalidateQueries({ queryKey: ['students'] });
+      toast.success('Aluno criado com sucesso.');
     },
   });
 
@@ -66,6 +75,7 @@ export function ImportsPage() {
     onSuccess: () => {
       setEditModalOpen(false);
       qc.invalidateQueries({ queryKey: ['students'] });
+      toast.success('Aluno atualizado com sucesso.');
     },
   });
 
@@ -73,6 +83,7 @@ export function ImportsPage() {
     mutationFn: async (id: string) => api.delete(`/users/students/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['students'] });
+      toast.success('Aluno removido.');
     },
   });
 
@@ -93,6 +104,7 @@ export function ImportsPage() {
       if (response?.data?.id) {
         setGroupId(response.data.id);
       }
+      toast.success('Lote criado com sucesso.');
     },
   });
 
@@ -115,6 +127,7 @@ export function ImportsPage() {
       setResult(data);
       qc.invalidateQueries({ queryKey: ['students'] });
       qc.invalidateQueries({ queryKey: ['groups'] });
+      toast.success('Importação concluída.');
     } finally {
       setUploading(false);
     }
@@ -130,195 +143,197 @@ export function ImportsPage() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <h1 style={{ margin: 0 }}>Alunos</h1>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Button variant="secondary" onClick={() => setGroupModalOpen(true)}>
-            Criar lote
-          </Button>
-          <Button onClick={() => setModalOpen(true)}>Adicionar aluno manualmente</Button>
+    <div className="grid gap-6">
+      <PageHeader
+        title="Alunos"
+        description="Importação, lotes e gerenciamento de cadastros."
+        actions={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setGroupModalOpen(true)}>
+              <Users size={16} />
+              Criar lote
+            </Button>
+            <Button onClick={() => setModalOpen(true)}>
+              <UserPlus size={16} />
+              Adicionar aluno
+            </Button>
+          </div>
+        }
+      />
+
+      <SectionCard title="Importar planilha" description="Upload de arquivo .xlsx com alunos.">
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            type="file"
+            accept=".xlsx"
+            disabled={uploading}
+            className="max-w-md"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) upload(file);
+            }}
+          />
+          <Badge variant="outline">
+            <Upload size={14} className="mr-1" />
+            {uploading ? 'Enviando...' : 'Pronto para upload'}
+          </Badge>
         </div>
-      </div>
+        <p className="mt-2 text-sm text-muted-foreground">Colunas obrigatórias: `name` e `email`. Opcional: `lote/grupo`.</p>
+      </SectionCard>
 
-      <Card>
-        <h2>Importar planilha</h2>
-        <input
-          type="file"
-          accept=".xlsx"
-          disabled={uploading}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) upload(file);
-          }}
-        />
-        {uploading ? <p style={{ margin: '8px 0 0 0', color: 'var(--primary-pressed)' }}>Enviando planilha...</p> : null}
-        <p>Colunas obrigatorias: name e email. Opcional: lote/grupo.</p>
-      </Card>
+      {result ? (
+        <SectionCard title="Relatório da importação" description="Resumo do processamento da planilha.">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border p-3">Criados: <strong>{result.createdCount}</strong></div>
+            <div className="rounded-lg border p-3">Já existiam: <strong>{result.existingCount}</strong></div>
+            <div className="rounded-lg border p-3">Falharam: <strong>{result.failedCount}</strong></div>
+          </div>
+        </SectionCard>
+      ) : null}
 
-      {result && (
-        <Card>
-          <h2>Relatorio da importacao</h2>
-          <p>Criados: {result.createdCount}</p>
-          <p>Ja existiam: {result.existingCount}</p>
-          <p>Falharam: {result.failedCount}</p>
-        </Card>
-      )}
+      <SectionCard title="Lotes" description="Grupos de alunos para organização.">
+        {!groups?.length ? (
+          <EmptyState title="Nenhum lote cadastrado" description="Crie um lote para facilitar o gerenciamento." />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Lote</TableHead>
+                <TableHead>Alunos</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {groups.map((group: any) => (
+                <TableRow key={group.id}>
+                  <TableCell>{group.name}</TableCell>
+                  <TableCell>{group._count?.users ?? 0}</TableCell>
+                  <TableCell>{group.isActive ? 'Ativo' : 'Inativo'}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant={group.isActive ? 'destructive' : 'default'}
+                      loading={toggleGroupStatus.isPending}
+                      disabled={toggleGroupStatus.isPending}
+                      onClick={() =>
+                        toggleGroupStatus.mutate(
+                          { id: group.id, isActive: !group.isActive },
+                          {
+                            onError: (error: any) => {
+                              toast.error(error?.response?.data?.message ?? 'Erro ao atualizar status do lote.');
+                            },
+                          },
+                        )
+                      }
+                    >
+                      {group.isActive ? 'Desativar lote' : 'Ativar lote'}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </SectionCard>
 
-      <Card>
-        <h2>Lotes</h2>
-        {!groups?.length && <p>Nenhum lote cadastrado.</p>}
-        {!!groups?.length && (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th align="left">Lote</th>
-                  <th align="left">Alunos</th>
-                  <th align="left">Status</th>
-                  <th align="left">Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((group: any) => (
-                  <tr key={group.id} style={{ borderTop: '1px solid var(--primary-soft)' }}>
-                    <td style={{ padding: '8px 0' }}>{group.name}</td>
-                    <td>{group._count?.users ?? 0}</td>
-                    <td>{group.isActive ? 'Ativo' : 'Inativo'}</td>
-                    <td style={{ padding: '8px 0' }}>
+      <SectionCard title="Lista de alunos" description="Cadastros atuais da base de alunos.">
+        {!students?.length ? (
+          <EmptyState title="Nenhum aluno cadastrado" description="Adicione manualmente ou importe uma planilha." />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>E-mail</TableHead>
+                <TableHead>Lote</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(students ?? []).map((student: any) => (
+                <TableRow key={student.id}>
+                  <TableCell>{student.name}</TableCell>
+                  <TableCell>{student.email}</TableCell>
+                  <TableCell>{student.group?.name ?? 'Sem lote'}</TableCell>
+                  <TableCell>{student.isActive ? 'Ativo' : 'Inativo'}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="secondary" aria-label="Editar aluno" title="Editar aluno" onClick={() => openEditStudent(student)}>
+                        <Pencil size={16} />
+                      </Button>
                       <Button
-                        variant={group.isActive ? 'destructive' : 'default'}
-                        loading={toggleGroupStatus.isPending}
-                        disabled={toggleGroupStatus.isPending}
+                        variant={student.isActive ? 'destructive' : 'default'}
+                        loading={toggleStudentStatus.isPending}
+                        disabled={toggleStudentStatus.isPending}
                         onClick={() =>
-                          toggleGroupStatus.mutate(
-                            { id: group.id, isActive: !group.isActive },
+                          toggleStudentStatus.mutate(
+                            { id: student.id, isActive: !student.isActive },
                             {
                               onError: (error: any) => {
-                                window.alert(error?.response?.data?.message ?? 'Erro ao atualizar status do lote.');
+                                toast.error(error?.response?.data?.message ?? 'Erro ao atualizar status do aluno.');
                               },
                             },
                           )
                         }
                       >
-                        {group.isActive ? 'Desativar lote' : 'Ativar lote'}
+                        {student.isActive ? 'Desativar' : 'Ativar'}
                       </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <Button
+                        variant="destructive"
+                        loading={deleteStudent.isPending}
+                        disabled={deleteStudent.isPending}
+                        aria-label="Excluir aluno"
+                        title="Excluir aluno"
+                        onClick={() => {
+                          if (!window.confirm(`Deseja excluir o aluno "${student.name}"?`)) return;
+                          deleteStudent.mutate(student.id, {
+                            onError: (error: any) => {
+                              toast.error(error?.response?.data?.message ?? 'Erro ao excluir aluno.');
+                            },
+                          });
+                        }}
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
-      </Card>
-
-      <Card>
-        <h2>Lista de alunos</h2>
-        {!students?.length && <p>Nenhum aluno cadastrado.</p>}
-        {!!students?.length && (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th align="left">Nome</th>
-                  <th align="left">E-mail</th>
-                  <th align="left">Lote</th>
-                  <th align="left">Status</th>
-                  <th align="left">Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(students ?? []).map((student: any) => (
-                  <tr key={student.id} style={{ borderTop: '1px solid var(--primary-soft)' }}>
-                    <td style={{ padding: '8px 0' }}>{student.name}</td>
-                    <td>{student.email}</td>
-                    <td>{student.group?.name ?? 'Sem lote'}</td>
-                    <td>{student.isActive ? 'Ativo' : 'Inativo'}</td>
-                    <td style={{ padding: '8px 0' }}>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <Button
-                          variant="secondary"
-                          aria-label="Editar aluno"
-                          title="Editar aluno"
-                          onClick={() => openEditStudent(student)}
-                        >
-                          <Icon name="edit" />
-                        </Button>
-                        <Button
-                          variant={student.isActive ? 'destructive' : 'default'}
-                          loading={toggleStudentStatus.isPending}
-                          disabled={toggleStudentStatus.isPending}
-                          onClick={() =>
-                            toggleStudentStatus.mutate(
-                              { id: student.id, isActive: !student.isActive },
-                              {
-                                onError: (error: any) => {
-                                  window.alert(error?.response?.data?.message ?? 'Erro ao atualizar status do aluno.');
-                                },
-                              },
-                            )
-                          }
-                        >
-                          {student.isActive ? 'Desativar' : 'Ativar'}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          loading={deleteStudent.isPending}
-                          disabled={deleteStudent.isPending}
-                          aria-label="Excluir aluno"
-                          title="Excluir aluno"
-                          onClick={() => {
-                            if (!window.confirm(`Deseja excluir o aluno "${student.name}"?`)) return;
-                            deleteStudent.mutate(student.id, {
-                              onError: (error: any) => {
-                                window.alert(error?.response?.data?.message ?? 'Erro ao excluir aluno.');
-                              },
-                            });
-                          }}
-                        >
-                          <Icon name="trash" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      </SectionCard>
 
       <Modal title="Adicionar aluno" open={modalOpen} onClose={() => setModalOpen(false)}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Nome
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" />
-          </label>
-          <label>
-            E-mail
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="aluno@rpx.com" />
-          </label>
-          <label>
-            Senha inicial
-            <input
+        <div className="grid gap-4">
+          <FormField id="student-name" label="Nome">
+            <Input id="student-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" />
+          </FormField>
+          <FormField id="student-email" label="E-mail">
+            <Input id="student-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="aluno@rpx.com" />
+          </FormField>
+          <FormField id="student-password" label="Senha inicial">
+            <Input
+              id="student-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Minimo 8 caracteres"
             />
-          </label>
-          <label>
-            Lote (opcional)
-            <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+          </FormField>
+          <FormField id="student-group" label="Lote (opcional)">
+            <Select id="student-group" value={groupId} onChange={(e) => setGroupId(e.target.value)}>
               <option value="">Sem lote</option>
               {(groups ?? []).map((group: any) => (
                 <option key={group.id} value={group.id}>
                   {group.name}
                 </option>
               ))}
-            </select>
-          </label>
+            </Select>
+          </FormField>
           <Button variant="secondary" onClick={() => setGroupModalOpen(true)}>
+            <Plus size={16} />
             Criar novo lote
           </Button>
           <Button
@@ -326,7 +341,7 @@ export function ImportsPage() {
             disabled={createStudent.isPending}
             onClick={() => {
               if (!name.trim() || !email.trim() || !password.trim()) {
-                window.alert('Preencha nome, e-mail e senha.');
+                toast.error('Preencha nome, e-mail e senha.');
                 return;
               }
               createStudent.mutate();
@@ -338,73 +353,68 @@ export function ImportsPage() {
       </Modal>
 
       <Modal title="Editar aluno" open={editModalOpen} onClose={() => setEditModalOpen(false)}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Nome
-            <input value={editingName} onChange={(e) => setEditingName(e.target.value)} />
-          </label>
-          <label>
-            E-mail
-            <input value={editingEmail} onChange={(e) => setEditingEmail(e.target.value)} />
-          </label>
-          <label>
-            Lote
-            <select value={editingGroupId} onChange={(e) => setEditingGroupId(e.target.value)}>
+        <div className="grid gap-4">
+          <FormField id="edit-student-name" label="Nome">
+            <Input id="edit-student-name" value={editingName} onChange={(e) => setEditingName(e.target.value)} />
+          </FormField>
+          <FormField id="edit-student-email" label="E-mail">
+            <Input id="edit-student-email" value={editingEmail} onChange={(e) => setEditingEmail(e.target.value)} />
+          </FormField>
+          <FormField id="edit-student-group" label="Lote">
+            <Select id="edit-student-group" value={editingGroupId} onChange={(e) => setEditingGroupId(e.target.value)}>
               <option value="">Sem lote</option>
               {(groups ?? []).map((group: any) => (
                 <option key={group.id} value={group.id}>
                   {group.name}
                 </option>
               ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select value={editingIsActive ? 'true' : 'false'} onChange={(e) => setEditingIsActive(e.target.value === 'true')}>
+            </Select>
+          </FormField>
+          <FormField id="edit-student-status" label="Status">
+            <Select
+              id="edit-student-status"
+              value={editingIsActive ? 'true' : 'false'}
+              onChange={(e) => setEditingIsActive(e.target.value === 'true')}
+            >
               <option value="true">Ativo</option>
               <option value="false">Inativo</option>
-            </select>
-          </label>
+            </Select>
+          </FormField>
           <Button
             loading={updateStudent.isPending}
             disabled={updateStudent.isPending}
             onClick={() => {
               if (!editingStudentId) {
-                window.alert('Aluno invalido.');
+                toast.error('Aluno invalido.');
                 return;
               }
               if (!editingName.trim() || !editingEmail.trim()) {
-                window.alert('Preencha nome e e-mail.');
+                toast.error('Preencha nome e e-mail.');
                 return;
               }
               updateStudent.mutate(undefined, {
                 onError: (error: any) => {
-                  window.alert(error?.response?.data?.message ?? 'Erro ao editar aluno.');
+                  toast.error(error?.response?.data?.message ?? 'Erro ao editar aluno.');
                 },
               });
             }}
           >
-            Salvar alteracoes
+            Salvar alterações
           </Button>
         </div>
       </Modal>
 
       <Modal title="Criar lote" open={groupModalOpen} onClose={() => setGroupModalOpen(false)}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label>
-            Nome do lote
-            <input
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Ex: Volta Redonda"
-            />
-          </label>
+        <div className="grid gap-4">
+          <FormField id="group-name" label="Nome do lote">
+            <Input id="group-name" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Ex: Volta Redonda" />
+          </FormField>
           <Button
             loading={createGroup.isPending}
             disabled={createGroup.isPending}
             onClick={() => {
               if (!groupName.trim()) {
-                window.alert('Digite o nome do lote.');
+                toast.error('Digite o nome do lote.');
                 return;
               }
               createGroup.mutate();
