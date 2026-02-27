@@ -27,7 +27,7 @@ export function DataBlockTable({
 
   return (
     <div className="overflow-x-auto rounded-md border">
-      <Table className="min-w-[640px]">
+      <Table className="min-w-[520px] sm:min-w-[640px]">
         <TableHeader>
           <TableRow>
             {headers.map((header) => (

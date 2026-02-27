@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Upload, UserPlus, Users } from 'lucide-react';
+import { Download, Pencil, Plus, Upload, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/Button';
@@ -28,6 +28,21 @@ export function ImportsPage() {
   const [groupId, setGroupId] = useState('');
   const [groupName, setGroupName] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<{
+    fileName: string;
+    totalRows: number;
+    validCount: number;
+    invalidCount: number;
+    rows: Array<{
+      rowNumber: number;
+      name: string;
+      email: string;
+      group: string;
+      status: 'VALID' | 'INVALID';
+      message: string;
+    }>;
+  } | null>(null);
 
   const [editingStudentId, setEditingStudentId] = useState('');
   const [editingName, setEditingName] = useState('');
@@ -133,6 +148,23 @@ export function ImportsPage() {
     }
   }
 
+  const previewImport = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await api.post('/imports/students/preview', formData);
+      return data;
+    },
+    onSuccess: (data) => {
+      setPreview(data);
+      toast.success('Pré-visualização pronta.');
+    },
+    onError: (error: any) => {
+      setPreview(null);
+      toast.error(error?.response?.data?.message ?? 'Nao foi possivel ler a planilha.');
+    },
+  });
+
   function openEditStudent(student: any) {
     setEditingStudentId(student.id);
     setEditingName(student.name ?? '');
@@ -142,18 +174,40 @@ export function ImportsPage() {
     setEditModalOpen(true);
   }
 
+  async function downloadImportTemplate() {
+    try {
+      const response = await api.get('/imports/students/template', {
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'template-importacao-alunos.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message ?? 'Nao foi possivel baixar o template.');
+    }
+  }
+
   return (
     <div className="grid gap-6">
       <PageHeader
         title="Alunos"
         description="Importação, lotes e gerenciamento de cadastros."
         actions={
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setGroupModalOpen(true)}>
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+            <Button variant="secondary" onClick={() => setGroupModalOpen(true)} className="w-full sm:w-auto">
               <Users size={16} />
               Criar lote
             </Button>
-            <Button onClick={() => setModalOpen(true)}>
+            <Button onClick={() => setModalOpen(true)} className="w-full sm:w-auto">
               <UserPlus size={16} />
               Adicionar aluno
             </Button>
@@ -166,20 +220,92 @@ export function ImportsPage() {
           <Input
             type="file"
             accept=".xlsx"
-            disabled={uploading}
+            disabled={uploading || previewImport.isPending}
             className="max-w-md"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) upload(file);
+              setSelectedFile(file ?? null);
+              setResult(null);
+              if (file) {
+                previewImport.mutate(file);
+              } else {
+                setPreview(null);
+              }
             }}
           />
           <Badge variant="outline">
             <Upload size={14} className="mr-1" />
-            {uploading ? 'Enviando...' : 'Pronto para upload'}
+            {previewImport.isPending ? 'Lendo planilha...' : uploading ? 'Enviando...' : 'Pronto para upload'}
           </Badge>
+          <Button variant="secondary" onClick={downloadImportTemplate}>
+            <Download size={16} />
+            Baixar template
+          </Button>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">Colunas obrigatórias: `name` e `email`. Opcional: `lote/grupo`.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Colunas obrigatórias: `name` e `email`. Opcional: `group`.
+        </p>
       </SectionCard>
+
+      {preview ? (
+        <SectionCard
+          title="Pré-visualização da planilha"
+          description="Confira as linhas válidas antes de salvar."
+          action={
+            <Button
+              onClick={() => {
+                if (!selectedFile) {
+                  toast.error('Selecione um arquivo .xlsx para importar.');
+                  return;
+                }
+                upload(selectedFile);
+              }}
+              loading={uploading}
+              disabled={!selectedFile || uploading || previewImport.isPending || preview.validCount === 0}
+              className="w-full sm:w-auto"
+            >
+              <Upload size={16} />
+              Salvar linhas válidas
+            </Button>
+          }
+        >
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border p-3">Linhas lidas: <strong>{preview.totalRows}</strong></div>
+            <div className="rounded-lg border p-3">Válidas: <strong>{preview.validCount}</strong></div>
+            <div className="rounded-lg border p-3">Inválidas: <strong>{preview.invalidCount}</strong></div>
+          </div>
+          <div className="mt-4 overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Linha</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Lote</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Mensagem</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {preview.rows.map((row) => (
+                  <TableRow key={`${row.rowNumber}-${row.email}`}>
+                    <TableCell>{row.rowNumber}</TableCell>
+                    <TableCell>{row.name || '-'}</TableCell>
+                    <TableCell>{row.email || '-'}</TableCell>
+                    <TableCell>{row.group || '-'}</TableCell>
+                    <TableCell>
+                      <Badge variant={row.status === 'VALID' ? 'secondary' : 'destructive'}>
+                        {row.status === 'VALID' ? 'Válida' : 'Inválida'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{row.message}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </SectionCard>
+      ) : null}
 
       {result ? (
         <SectionCard title="Relatório da importação" description="Resumo do processamento da planilha.">
@@ -188,6 +314,42 @@ export function ImportsPage() {
             <div className="rounded-lg border p-3">Já existiam: <strong>{result.existingCount}</strong></div>
             <div className="rounded-lg border p-3">Falharam: <strong>{result.failedCount}</strong></div>
           </div>
+          {result.rowLogs?.length ? (
+            <div className="mt-4 overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Linha</TableHead>
+                    <TableHead>E-mail</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Mensagem</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {result.rowLogs.map((log: any) => (
+                    <TableRow key={log.id}>
+                      <TableCell>{log.rowNumber}</TableCell>
+                      <TableCell>{log.email ?? '-'}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            log.status === 'CREATED'
+                              ? 'secondary'
+                              : log.status === 'FAILED'
+                                ? 'destructive'
+                                : 'outline'
+                          }
+                        >
+                          {log.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{log.message}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : null}
         </SectionCard>
       ) : null}
 
@@ -195,44 +357,46 @@ export function ImportsPage() {
         {!groups?.length ? (
           <EmptyState title="Nenhum lote cadastrado" description="Crie um lote para facilitar o gerenciamento." />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Lote</TableHead>
-                <TableHead>Alunos</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groups.map((group: any) => (
-                <TableRow key={group.id}>
-                  <TableCell>{group.name}</TableCell>
-                  <TableCell>{group._count?.users ?? 0}</TableCell>
-                  <TableCell>{group.isActive ? 'Ativo' : 'Inativo'}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant={group.isActive ? 'destructive' : 'default'}
-                      loading={toggleGroupStatus.isPending}
-                      disabled={toggleGroupStatus.isPending}
-                      onClick={() =>
-                        toggleGroupStatus.mutate(
-                          { id: group.id, isActive: !group.isActive },
-                          {
-                            onError: (error: any) => {
-                              toast.error(error?.response?.data?.message ?? 'Erro ao atualizar status do lote.');
-                            },
-                          },
-                        )
-                      }
-                    >
-                      {group.isActive ? 'Desativar lote' : 'Ativar lote'}
-                    </Button>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[560px] sm:min-w-[680px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Lote</TableHead>
+                  <TableHead>Alunos</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {groups.map((group: any) => (
+                  <TableRow key={group.id}>
+                    <TableCell>{group.name}</TableCell>
+                    <TableCell>{group._count?.users ?? 0}</TableCell>
+                    <TableCell>{group.isActive ? 'Ativo' : 'Inativo'}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant={group.isActive ? 'destructive' : 'default'}
+                        loading={toggleGroupStatus.isPending}
+                        disabled={toggleGroupStatus.isPending}
+                        onClick={() =>
+                          toggleGroupStatus.mutate(
+                            { id: group.id, isActive: !group.isActive },
+                            {
+                              onError: (error: any) => {
+                                toast.error(error?.response?.data?.message ?? 'Erro ao atualizar status do lote.');
+                              },
+                            },
+                          )
+                        }
+                      >
+                        {group.isActive ? 'Desativar lote' : 'Ativar lote'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </SectionCard>
 
@@ -240,68 +404,70 @@ export function ImportsPage() {
         {!students?.length ? (
           <EmptyState title="Nenhum aluno cadastrado" description="Adicione manualmente ou importe uma planilha." />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Lote</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(students ?? []).map((student: any) => (
-                <TableRow key={student.id}>
-                  <TableCell>{student.name}</TableCell>
-                  <TableCell>{student.email}</TableCell>
-                  <TableCell>{student.group?.name ?? 'Sem lote'}</TableCell>
-                  <TableCell>{student.isActive ? 'Ativo' : 'Inativo'}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="secondary" aria-label="Editar aluno" title="Editar aluno" onClick={() => openEditStudent(student)}>
-                        <Pencil size={16} />
-                      </Button>
-                      <Button
-                        variant={student.isActive ? 'destructive' : 'default'}
-                        loading={toggleStudentStatus.isPending}
-                        disabled={toggleStudentStatus.isPending}
-                        onClick={() =>
-                          toggleStudentStatus.mutate(
-                            { id: student.id, isActive: !student.isActive },
-                            {
-                              onError: (error: any) => {
-                                toast.error(error?.response?.data?.message ?? 'Erro ao atualizar status do aluno.');
-                              },
-                            },
-                          )
-                        }
-                      >
-                        {student.isActive ? 'Desativar' : 'Ativar'}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        loading={deleteStudent.isPending}
-                        disabled={deleteStudent.isPending}
-                        aria-label="Excluir aluno"
-                        title="Excluir aluno"
-                        onClick={() => {
-                          if (!window.confirm(`Deseja excluir o aluno "${student.name}"?`)) return;
-                          deleteStudent.mutate(student.id, {
-                            onError: (error: any) => {
-                              toast.error(error?.response?.data?.message ?? 'Erro ao excluir aluno.');
-                            },
-                          });
-                        }}
-                      >
-                        Excluir
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[760px] sm:min-w-[920px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Lote</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {(students ?? []).map((student: any) => (
+                  <TableRow key={student.id}>
+                    <TableCell>{student.name}</TableCell>
+                    <TableCell>{student.email}</TableCell>
+                    <TableCell>{student.group?.name ?? 'Sem lote'}</TableCell>
+                    <TableCell>{student.isActive ? 'Ativo' : 'Inativo'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="secondary" aria-label="Editar aluno" title="Editar aluno" onClick={() => openEditStudent(student)}>
+                          <Pencil size={16} />
+                        </Button>
+                        <Button
+                          variant={student.isActive ? 'destructive' : 'default'}
+                          loading={toggleStudentStatus.isPending}
+                          disabled={toggleStudentStatus.isPending}
+                          onClick={() =>
+                            toggleStudentStatus.mutate(
+                              { id: student.id, isActive: !student.isActive },
+                              {
+                                onError: (error: any) => {
+                                  toast.error(error?.response?.data?.message ?? 'Erro ao atualizar status do aluno.');
+                                },
+                              },
+                            )
+                          }
+                        >
+                          {student.isActive ? 'Desativar' : 'Ativar'}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          loading={deleteStudent.isPending}
+                          disabled={deleteStudent.isPending}
+                          aria-label="Excluir aluno"
+                          title="Excluir aluno"
+                          onClick={() => {
+                            if (!window.confirm(`Deseja excluir o aluno "${student.name}"?`)) return;
+                            deleteStudent.mutate(student.id, {
+                              onError: (error: any) => {
+                                toast.error(error?.response?.data?.message ?? 'Erro ao excluir aluno.');
+                              },
+                            });
+                          }}
+                        >
+                          Excluir
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </SectionCard>
 

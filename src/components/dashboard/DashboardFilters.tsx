@@ -97,12 +97,12 @@ export function DashboardFilters({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onReset}>
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+          <Button variant="outline" onClick={onReset} className="w-full sm:w-auto">
             <RefreshCcw size={16} />
             Limpar
           </Button>
-          <Button variant="secondary" disabled>
+          <Button variant="secondary" disabled className="w-full sm:w-auto">
             <CalendarRange size={16} />
             Filtros ativos
           </Button>

@@ -1,6 +1,6 @@
 import { useMemo, useState, type PropsWithChildren } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, LogOut, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 import { Sidebar } from '@/components/Sidebar';
 import { Button } from '@/components/Button';
@@ -71,9 +71,6 @@ export function AppLayout({ children }: PropsWithChildren) {
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button variant="ghost" size="icon" aria-label="Notificações">
-                <Bell size={18} />
-              </Button>
               <div className="hidden items-center gap-2 rounded-lg border px-2 py-1.5 md:flex">
                 <Avatar className="h-8 w-8 border">
                   <AvatarFallback>{user?.name?.slice(0, 1)?.toUpperCase() ?? 'A'}</AvatarFallback>

@@ -49,7 +49,7 @@ export function RankingPage() {
         title="Ranking"
         description="Classificação por eficiência considerando quiz final, progresso nas aulas e evolução (final - inicial)."
         actions={
-          <Button onClick={exportCsv} disabled={!data?.length}>
+          <Button onClick={exportCsv} disabled={!data?.length} className="w-full sm:w-auto">
             <Download size={16} />
             Exportar CSV
           </Button>
@@ -64,7 +64,7 @@ export function RankingPage() {
         ) : null}
         {!!data?.length && (
           <div className="overflow-x-auto">
-            <Table className="min-w-[760px]">
+            <Table className="min-w-[620px] sm:min-w-[760px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Posição</TableHead>
