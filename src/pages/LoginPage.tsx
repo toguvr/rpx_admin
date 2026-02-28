@@ -15,8 +15,8 @@ export function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const privacyPolicyUrl = (import.meta.env.VITE_PRIVACY_POLICY_URL as string | undefined) || '/privacy-policy';
   const isExternalPrivacyUrl = /^https?:\/\//i.test(privacyPolicyUrl);
-  const [email, setEmail] = useState('admin@rpx.com');
-  const [password, setPassword] = useState('Admin@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
 
