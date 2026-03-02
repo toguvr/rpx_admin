@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit3, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -30,14 +30,31 @@ export function CoursesPage() {
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [courseTitle, setCourseTitle] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
+  const [draggingCourseId, setDraggingCourseId] = useState('');
+  const [dragOverCourseId, setDragOverCourseId] = useState('');
+  const [orderedCourses, setOrderedCourses] = useState<any[]>([]);
+
+  useEffect(() => {
+    setOrderedCourses([...(data ?? [])]);
+  }, [data]);
 
   const filteredData = useMemo(
     () =>
-      (data ?? []).filter((course: any) =>
+      orderedCourses.filter((course: any) =>
         `${course.title ?? ''} ${course.description ?? ''}`.toLowerCase().includes(search.toLowerCase()),
       ),
-    [data, search],
+    [orderedCourses, search],
   );
+
+  function reorderList<T extends { id: string }>(items: T[], fromId: string, toId: string) {
+    const from = items.findIndex((item) => item.id === fromId);
+    const to = items.findIndex((item) => item.id === toId);
+    if (from < 0 || to < 0 || from === to) return items;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    return next;
+  }
 
   function closeModal() {
     setModalType('none');
@@ -83,6 +100,14 @@ export function CoursesPage() {
     },
   });
 
+  const reorderCourses = useMutation({
+    mutationFn: async (courseIds: string[]) => api.patch('/courses/reorder', { courseIds }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Ordem dos cursos atualizada.');
+    },
+  });
+
   const isSavingCourse = modalType !== 'none' && (createCourse.isPending || updateCourse.isPending);
 
   return (
@@ -118,12 +143,48 @@ export function CoursesPage() {
 
         <div className="grid gap-3">
           {filteredData.map((course: any) => (
-            <div key={course.id} className="rounded-lg border bg-card/60 p-4">
+            <div
+              key={course.id}
+              className="rounded-lg border bg-card/60 p-4"
+              draggable
+              onDragStart={() => setDraggingCourseId(course.id)}
+              onDragEnter={() => {
+                if (!draggingCourseId || draggingCourseId === course.id || reorderCourses.isPending) return;
+                setDragOverCourseId(course.id);
+                setOrderedCourses((prev) => reorderList(prev, draggingCourseId, course.id));
+              }}
+              onDragOver={(event) => event.preventDefault()}
+              onDragLeave={() => {
+                if (dragOverCourseId === course.id) {
+                  setDragOverCourseId('');
+                }
+              }}
+              onDragEnd={() => {
+                if (!draggingCourseId || reorderCourses.isPending) return;
+                const nextIds = orderedCourses.map((item) => item.id);
+                setDraggingCourseId('');
+                setDragOverCourseId('');
+                reorderCourses.mutate(nextIds, {
+                  onError: async (error: any) => {
+                    await qc.invalidateQueries({ queryKey: ['courses'] });
+                    toast.error(error?.response?.data?.message ?? 'Erro ao reordenar cursos.');
+                  },
+                });
+              }}
+              style={{
+                background: dragOverCourseId === course.id ? 'var(--primary-soft)' : undefined,
+                boxShadow:
+                  dragOverCourseId === course.id ? 'inset 0 0 0 1px var(--primary)' : undefined,
+                cursor: reorderCourses.isPending ? 'progress' : 'grab',
+                opacity: draggingCourseId === course.id ? 0.7 : 1,
+              }}
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
                   <strong className="text-base">{course.title}</strong>
                   <p className="text-sm text-muted-foreground">{course.description}</p>
                   <div className="flex items-center gap-2">
+                    <Badge variant="outline">Ordem {course.order}</Badge>
                     <Badge variant="outline">{(course.lessons ?? []).length} aulas</Badge>
                     <Badge variant="outline">{(course.quizzes ?? []).length} quizzes</Badge>
                   </div>

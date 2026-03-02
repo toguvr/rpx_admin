@@ -30,7 +30,7 @@ export function InviteActivationPage() {
 
   async function handleSubmit() {
     if (!token) {
-      setError('Convite invalido.');
+      setError('Link invalido.');
       return;
     }
 
@@ -58,7 +58,7 @@ export function InviteActivationPage() {
         window.location.href = getStoreUrl();
       }, 1200);
     } catch (submitError: any) {
-      setError(submitError?.response?.data?.message || 'Nao foi possivel ativar o acesso.');
+      setError(submitError?.response?.data?.message || 'Nao foi possivel definir a senha.');
     } finally {
       setSubmitting(false);
     }
@@ -70,9 +70,9 @@ export function InviteActivationPage() {
         <div className="mb-6 space-y-3 text-center">
           <img src={logo} alt="RPX" className="mx-auto w-full max-w-[220px]" />
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Ative seu acesso</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Defina sua senha</h1>
             <p className="text-sm text-muted-foreground">
-              Defina sua senha para entrar no app do aluno e concluir o primeiro acesso.
+              Use esta tela para concluir o acesso inicial ou redefinir a senha do app do aluno.
             </p>
           </div>
         </div>
@@ -102,7 +102,7 @@ export function InviteActivationPage() {
           {success ? <p className="text-sm text-emerald-600">{success}</p> : null}
 
           <Button onClick={handleSubmit} loading={submitting} disabled={submitting || !token} className="w-full">
-            Salvar senha e baixar app
+            Salvar senha e abrir app
           </Button>
         </div>
       </Card>

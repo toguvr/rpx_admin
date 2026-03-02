@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Pencil, Plus, Upload, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,6 +18,8 @@ import { api } from '@/services/api';
 
 export function ImportsPage() {
   const qc = useQueryClient();
+  const [studentFilterType, setStudentFilterType] = useState<'all' | 'name' | 'email' | 'group' | 'status'>('name');
+  const [studentSearch, setStudentSearch] = useState('');
   const [result, setResult] = useState<any>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
@@ -60,6 +62,39 @@ export function ImportsPage() {
     queryKey: ['groups'],
     queryFn: async () => (await api.get('/users/groups')).data,
   });
+
+  const filteredStudents = useMemo(() => {
+    const query = studentSearch.trim().toLowerCase();
+    const source = students ?? [];
+
+    if (!query) {
+      return source;
+    }
+
+    return source.filter((student: any) => {
+      const fields =
+        studentFilterType === 'all'
+          ? [
+              student.name ?? '',
+              student.email ?? '',
+              student.group?.name ?? '',
+              student.isActive ? 'ativo' : 'inativo',
+            ]
+          : [
+              studentFilterType === 'name'
+                ? student.name ?? ''
+                : studentFilterType === 'email'
+                  ? student.email ?? ''
+                  : studentFilterType === 'group'
+                    ? student.group?.name ?? ''
+                    : student.isActive
+                      ? 'ativo'
+                      : 'inativo',
+            ];
+
+      return fields.some((value) => String(value).toLowerCase().includes(query));
+    });
+  }, [studentFilterType, studentSearch, students]);
 
   const createStudent = useMutation({
     mutationFn: async () =>
@@ -506,11 +541,39 @@ export function ImportsPage() {
         )}
       </SectionCard>
 
-      <SectionCard title="Lista de alunos" description="Cadastros atuais da base de alunos.">
+      <SectionCard
+        title="Lista de alunos"
+        description="Cadastros atuais da base de alunos."
+        action={
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+            <Select
+              value={studentFilterType}
+              onChange={(event) => setStudentFilterType(event.target.value as 'all' | 'name' | 'email' | 'group' | 'status')}
+              className="w-full md:w-[170px]"
+            >
+              <option value="name">Filtrar por nome</option>
+              <option value="email">Filtrar por e-mail</option>
+              <option value="group">Filtrar por lote</option>
+              <option value="status">Filtrar por status</option>
+              <option value="all">Buscar em tudo</option>
+            </Select>
+            <Input
+              value={studentSearch}
+              onChange={(event) => setStudentSearch(event.target.value)}
+              placeholder="Digite para buscar aluno"
+              className="w-full md:w-[280px]"
+            />
+          </div>
+        }
+      >
         {!students?.length ? (
           <EmptyState title="Nenhum aluno cadastrado" description="Adicione manualmente ou importe uma planilha." />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              {filteredStudents.length} {filteredStudents.length === 1 ? 'aluno encontrado' : 'alunos encontrados'}
+            </div>
+            <div className="overflow-x-auto">
             <Table className="min-w-[760px] sm:min-w-[920px]">
               <TableHeader>
                 <TableRow>
@@ -522,7 +585,7 @@ export function ImportsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(students ?? []).map((student: any) => (
+                {filteredStudents.map((student: any) => (
                   <TableRow key={student.id}>
                     <TableCell>{student.name}</TableCell>
                     <TableCell>{student.email}</TableCell>
@@ -573,6 +636,13 @@ export function ImportsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
+            {!filteredStudents.length ? (
+              <EmptyState
+                title="Nenhum aluno encontrado"
+                description="Ajuste o tipo de filtro ou refine o termo buscado."
+              />
+            ) : null}
           </div>
         )}
       </SectionCard>
