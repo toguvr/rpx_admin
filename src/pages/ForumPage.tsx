@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, MessageCirclePlus } from 'lucide-react';
+import { CheckCircle2, MessageCirclePlus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/Button';
@@ -22,6 +22,8 @@ export function ForumPage() {
   const [answerQuestionId, setAnswerQuestionId] = useState('');
   const [answerBody, setAnswerBody] = useState('');
   const [solvingAnswerId, setSolvingAnswerId] = useState('');
+  const [deletingQuestionId, setDeletingQuestionId] = useState('');
+  const [deletingAnswerId, setDeletingAnswerId] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'SOLVED'>('ALL');
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -46,6 +48,22 @@ export function ForumPage() {
       setAnswerModalOpen(false);
       qc.invalidateQueries({ queryKey: ['forum'] });
       toast.success('Resposta salva.');
+    },
+  });
+
+  const deleteQuestion = useMutation({
+    mutationFn: async (questionId: string) => api.delete(`/forum/${questionId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['forum'] });
+      toast.success('Pergunta excluída.');
+    },
+  });
+
+  const deleteAnswer = useMutation({
+    mutationFn: async (answerId: string) => api.delete(`/forum/answers/${answerId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['forum'] });
+      toast.success('Resposta excluída.');
     },
   });
 
@@ -90,6 +108,27 @@ export function ForumPage() {
                 <Badge variant={q.status === 'SOLVED' ? 'secondary' : 'outline'}>
                   {q.status === 'SOLVED' ? 'Solucionada' : 'Aberta'}
                 </Badge>
+                {role === 'ADMIN' ? (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    loading={deleteQuestion.isPending && deletingQuestionId === q.id}
+                    disabled={deleteQuestion.isPending}
+                    onClick={() => {
+                      if (!window.confirm('Deseja excluir esta pergunta e todas as respostas?')) return;
+                      setDeletingQuestionId(q.id);
+                      deleteQuestion.mutate(q.id, {
+                        onError: (error: any) => {
+                          toast.error(error?.response?.data?.message ?? 'Erro ao excluir pergunta.');
+                        },
+                        onSettled: () => setDeletingQuestionId(''),
+                      });
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    Excluir pergunta
+                  </Button>
+                ) : null}
               </div>
 
               <strong className="text-base">{q.title}</strong>
@@ -109,6 +148,29 @@ export function ForumPage() {
                         ) : null}
                       </div>
                       <p className="text-sm">{ans.body}</p>
+                      {role === 'ADMIN' ? (
+                        <div className="mt-2">
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            loading={deleteAnswer.isPending && deletingAnswerId === ans.id}
+                            disabled={deleteAnswer.isPending}
+                            onClick={() => {
+                              if (!window.confirm('Deseja excluir esta resposta?')) return;
+                              setDeletingAnswerId(ans.id);
+                              deleteAnswer.mutate(ans.id, {
+                                onError: (error: any) => {
+                                  toast.error(error?.response?.data?.message ?? 'Erro ao excluir resposta.');
+                                },
+                                onSettled: () => setDeletingAnswerId(''),
+                              });
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            Excluir resposta
+                          </Button>
+                        </div>
+                      ) : null}
                       {(role === 'PROFESSOR' || role === 'ADMIN') && (
                         <div className="mt-2">
                           <Button
