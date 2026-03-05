@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import logo from '@/assets/rpx-logo.png';
@@ -35,6 +35,12 @@ export function LoginPage() {
     }
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (loggingIn) return;
+    void handleLogin();
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md border bg-card/95 p-6 shadow-lg">
@@ -44,7 +50,7 @@ export function LoginPage() {
           <p className="text-sm text-muted-foreground">Use suas credenciais para acessar o painel administrativo.</p>
         </div>
 
-        <div className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <FormField id="email" label="E-mail">
             <Input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@rpx.com" />
           </FormField>
@@ -60,7 +66,7 @@ export function LoginPage() {
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          <Button onClick={handleLogin} loading={loggingIn} disabled={loggingIn} className="w-full">
+          <Button type="submit" loading={loggingIn} disabled={loggingIn} className="w-full">
             Entrar
           </Button>
 
@@ -75,7 +81,7 @@ export function LoginPage() {
               </a>
             </p>
           ) : null}
-        </div>
+        </form>
       </Card>
     </div>
   );

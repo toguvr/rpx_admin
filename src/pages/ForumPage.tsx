@@ -104,7 +104,7 @@ export function ForumPage() {
         <div className="grid gap-3">
           {filteredQuestions.map((q: any) => (
             <div key={q.id} className="rounded-lg border bg-card/70 p-4">
-              <div className="mb-2 flex items-center gap-2">
+              <div className="mb-2 flex items-start justify-between gap-2">
                 <Badge variant={q.status === 'SOLVED' ? 'secondary' : 'outline'}>
                   {q.status === 'SOLVED' ? 'Solucionada' : 'Aberta'}
                 </Badge>
@@ -112,6 +112,7 @@ export function ForumPage() {
                   <Button
                     size="sm"
                     variant="destructive"
+                    className="h-8 w-8 p-0"
                     loading={deleteQuestion.isPending && deletingQuestionId === q.id}
                     disabled={deleteQuestion.isPending}
                     onClick={() => {
@@ -124,9 +125,10 @@ export function ForumPage() {
                         onSettled: () => setDeletingQuestionId(''),
                       });
                     }}
+                    aria-label="Excluir pergunta"
+                    title="Excluir pergunta"
                   >
                     <Trash2 size={14} />
-                    Excluir pergunta
                   </Button>
                 ) : null}
               </div>
@@ -146,13 +148,11 @@ export function ForumPage() {
                         {(q.solutionAnswerId === ans.id || q.solutionAnswer?.id === ans.id) ? (
                           <Badge variant="secondary">Solução escolhida</Badge>
                         ) : null}
-                      </div>
-                      <p className="text-sm">{ans.body}</p>
-                      {role === 'ADMIN' ? (
-                        <div className="mt-2">
+                        {role === 'ADMIN' ? (
                           <Button
                             size="sm"
                             variant="destructive"
+                            className="ml-auto h-8 w-8 p-0"
                             loading={deleteAnswer.isPending && deletingAnswerId === ans.id}
                             disabled={deleteAnswer.isPending}
                             onClick={() => {
@@ -165,12 +165,14 @@ export function ForumPage() {
                                 onSettled: () => setDeletingAnswerId(''),
                               });
                             }}
+                            aria-label="Excluir resposta"
+                            title="Excluir resposta"
                           >
                             <Trash2 size={14} />
-                            Excluir resposta
                           </Button>
-                        </div>
-                      ) : null}
+                        ) : null}
+                      </div>
+                      <p className="text-sm">{ans.body}</p>
                       {(role === 'PROFESSOR' || role === 'ADMIN') && (
                         <div className="mt-2">
                           <Button
