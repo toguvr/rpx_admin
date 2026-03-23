@@ -5,6 +5,7 @@ import { CourseDetailsPage } from '@/pages/CourseDetailsPage';
 import { CoursesPage } from '@/pages/CoursesPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ForumPage } from '@/pages/ForumPage';
+import { FeedbackPage } from '@/pages/FeedbackPage';
 import { ImportsPage } from '@/pages/ImportsPage';
 import { InviteActivationPage } from '@/pages/InviteActivationPage';
 import { LoginPage } from '@/pages/LoginPage';
@@ -13,6 +14,7 @@ import { PsychologistChatPage } from '@/pages/PsychologistChatPage';
 import { PsychologistsPage } from '@/pages/PsychologistsPage';
 import { QuizDetailsPage } from '@/pages/QuizDetailsPage';
 import { RankingPage } from '@/pages/RankingPage';
+import { StudentReportsPage } from '@/pages/StudentReportsPage';
 import { TeachersPage } from '@/pages/TeachersPage';
 import { useAuthStore } from '@/store/auth';
 import { hasAccess, roleAccessMap, type Role } from '@/types/roles';
@@ -73,6 +75,22 @@ export function AppRoutes() {
                   element={
                     <RoleRoute routeKey="courses">
                       <QuizDetailsPage />
+                    </RoleRoute>
+                  }
+                />
+                <Route
+                  path="feedback"
+                  element={
+                    <RoleRoute routeKey="feedback">
+                      <FeedbackPage />
+                    </RoleRoute>
+                  }
+                />
+                <Route
+                  path="reports"
+                  element={
+                    <RoleRoute routeKey="reports">
+                      <StudentReportsPage />
                     </RoleRoute>
                   }
                 />

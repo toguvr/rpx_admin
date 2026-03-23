@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BookOpen, FileSpreadsheet, GraduationCap, LayoutDashboard, MessageSquareQuote, MessagesSquare, Trophy, UserRoundCog, Users } from 'lucide-react';
+import { BookOpen, FileSpreadsheet, GraduationCap, LayoutDashboard, MessageSquareQuote, MessagesSquare, MessageSquareText, Printer, Trophy, UserRoundCog, Users } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth';
 import { hasAccess } from '@/types/roles';
@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
 const items = [
   { to: '/dashboard', label: 'Dashboard', key: 'dashboard', icon: LayoutDashboard },
   { to: '/courses', label: 'Cursos', key: 'courses', icon: BookOpen },
+  { to: '/reports', label: 'Relatórios', key: 'reports', icon: Printer },
+  { to: '/feedback', label: 'Feedback', key: 'feedback', icon: MessageSquareText },
   { to: '/forum', label: 'Fórum', key: 'forum', icon: MessagesSquare },
   { to: '/ranking', label: 'Ranking', key: 'ranking', icon: Trophy },
   { to: '/imports', label: 'Alunos', key: 'imports', icon: GraduationCap },

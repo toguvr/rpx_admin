@@ -12,6 +12,8 @@ import { useAuthStore } from '@/store/auth';
 const labels: Record<string, string> = {
   dashboard: 'Dashboard',
   courses: 'Cursos',
+  reports: 'Relatórios',
+  feedback: 'Feedback',
   quizzes: 'Quizzes',
   forum: 'Fórum',
   ranking: 'Ranking',

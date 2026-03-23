@@ -9,7 +9,7 @@ export function SectionCard({
   children,
   className,
 }: {
-  title: string;
+  title: ReactNode;
   description?: string;
   action?: ReactNode;
   children: ReactNode;
