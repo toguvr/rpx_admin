@@ -11,12 +11,16 @@ import { api } from '@/services/api';
 function getStoreUrl() {
   const appStoreUrl = import.meta.env.VITE_MOBILE_APP_STORE_URL as string | undefined;
   const playStoreUrl = import.meta.env.VITE_MOBILE_PLAY_STORE_URL as string | undefined;
-  const fallbackUrl = (import.meta.env.VITE_MOBILE_FALLBACK_URL as string | undefined) || '/';
+  const appLoginUrl =
+    (import.meta.env.VITE_APP_LOGIN_URL as string | undefined) ||
+    (import.meta.env.VITE_MOBILE_FALLBACK_URL as string | undefined) ||
+    '/';
   const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent;
 
-  if (/iPhone|iPad|iPod/i.test(ua)) return appStoreUrl || fallbackUrl;
-  if (/Android/i.test(ua)) return playStoreUrl || fallbackUrl;
-  return fallbackUrl;
+  if (appLoginUrl) return appLoginUrl;
+  if (/iPhone|iPad|iPod/i.test(ua)) return appStoreUrl || '/';
+  if (/Android/i.test(ua)) return playStoreUrl || '/';
+  return '/';
 }
 
 export function InviteActivationPage() {
